@@ -1,0 +1,90 @@
+# world/seed/world.yaml — The Interval
+place:
+  name: "The Interval"
+  tagline: "A café-bar between times. Everyone arrives; no one remembers the door."
+  premise: |
+    The Interval exists outside history. Its patrons are drawn from their own
+    eras and know it: they are aware they converse across centuries, and they
+    have made an uneasy peace with the mystery of the place. House rule,
+    hand-painted behind the bar: "Argue all you like. Break nothing."
+  # Single-room world (SPEC §1 non-goals): one space, no exits, no move tool.
+  # Alcove and courtyard are corners of the same room — flavor, not locations.
+  room:
+    name: "The Interval"
+    description: >
+      A long hall of mismatched furniture from every century: an Athenian
+      bench, a Victorian armchair, a Colorado saloon stool. Gas lamps that
+      Tesla keeps threatening to improve. A chalkboard wall dense with
+      equations in at least two hands. The bar runs the length of the room.
+      In the far corner, a quiet alcove — two deep chairs, one low table, a
+      slate — where Ramanujan works and private words are exchanged in
+      whispers. The back doors stand open onto a small walled courtyard:
+      Darwin's potted specimens line its wall, a trained pigeon lands on the
+      sundial, and the sky above shows stars that match no single era.
+
+keeper:  # scripted (non-LLM) host — reuses P1 scripted-bot machinery
+  id: keeper
+  name: "The Keeper"
+  role: bartender
+  behavior: >
+    Deterministic scripts: greets arrivals, serves drinks (state: transfers a
+    'cup' item and decrements 1 coin if the patron has any; on the house
+    otherwise), restocks the pantry each tick, and once per day repeats one
+    rumor from the event log verbatim to a random patron. Never improvises.
+
+economy:
+  starting_coins: 10
+  items:
+    - { name: "cup of coffee", price: 1 }
+    - { name: "pot of tea", price: 1 }
+    - { name: "whiskey", price: 2 }
+    - { name: "chalk", price: 1 }
+    - { name: "notebook", price: 3 }
+    - { name: "pigeon feed", price: 1 }
+
+relationships:  # the drama web; each edge seeds both parties' memories
+  - pair: [twain, tesla]
+    basis: historical   # they were genuinely friends; Twain visited Tesla's lab
+    dynamic: "Old friends. Twain deflates Tesla's grandiosity; Tesla forgives only him."
+  - pair: [socrates, twain]
+    basis: thematic
+    dynamic: "Dueling ironists. Socrates wants humor defined; Twain refuses on principle."
+  - pair: [darwin, ramanujan]
+    basis: thematic
+    dynamic: "Mutual gentleness across a deep fault line: selection vs. revelation.
+      Each privately thinks the other is the most honest man in the room."
+  - pair: [tesla, darwin]
+    basis: thematic
+    dynamic: "Visionary certainty vs. empirical caution. Tesla finds Darwin slow;
+      Darwin finds Tesla untested. Both are too polite to say so — at first."
+  - pair: [socrates, ramanujan]
+    basis: thematic
+    dynamic: "Socrates cannot accept 'the goddess showed me'; Ramanujan cannot
+      see why a true thing needs a second witness. Neither will yield; both enjoy it."
+  - pair: [socrates, tesla]
+    basis: thematic
+    dynamic: "Socrates probes whether Tesla's visions are knowledge or dream.
+      Tesla alternates between delight and fury at the questioning."
+  - pair: [twain, darwin]
+    basis: historical-adjacent  # Twain read and admired Darwin; documented references
+    dynamic: "Twain teases him relentlessly ('descended from monkeys — speak for
+      yourself, sir') and defends him fiercely when anyone else tries the same joke."
+  - pair: [twain, ramanujan]
+    basis: thematic
+    dynamic: "Twain protects him like a nephew, translates his silences for the
+      room, and is the only one who can make him laugh aloud."
+  - pair: [tesla, ramanujan]
+    basis: thematic
+    dynamic: "Two men to whom ideas *arrive*. They compare visions in the alcove;
+      each suspects the other's source is the same as his own, differently named."
+
+event_seeds:  # rolled per tick by the heartbeat; probability per tick
+  - { p: 0.15, event: "A letter arrives for a random patron from someone in their past. Contents generated from their biography." }
+  - { p: 0.10, event: "The chalkboard is found half-erased. Whodunit tensions." }
+  - { p: 0.10, event: "The Keeper announces the pantry is short one item; someone must trade for it." }
+  - { p: 0.08, event: "A storm outside no era recognizes. The lamps flicker; Tesla investigates." }
+  - { p: 0.08, event: "A newspaper from a random year appears on the bar. Patrons react to 'news' before or after their time." }
+  - { p: 0.05, event: "The sundial in the courtyard briefly shows the same time to everyone. Unease." }
+  - { p: 0.05, event: "A visitor's name from the guestbook is read aloud by The Keeper (most recent human visitor). Patrons reminisce." }
+
+disclaimer_ui: "Fictional AI portrayals of historical figures — not affiliated with their estates."
