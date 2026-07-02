@@ -266,9 +266,8 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
 
     try:
         action = _to_action(actor_id, tool, args)
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError):
         action = None
-        bad_arg = str(exc)
     if action is None:
         result = Err(Code.INVALID_ARG, f"bad args for '{tool}'").to_dict()
         _log(session, world.tick, actor_id, tool, dict(args), result)

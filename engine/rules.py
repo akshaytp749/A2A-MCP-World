@@ -6,7 +6,6 @@ LLMs produce intentions; only mutations that pass this file become facts.
 """
 
 from dataclasses import dataclass, field
-from typing import Union
 
 from engine.errors import Code, Err
 
@@ -110,7 +109,7 @@ class TradeRespond:
     accept: bool
 
 
-Action = Union[Say, Whisper, Emote, GiveItem, GiveCoins, PickUp, Drop, TradeOffer, TradeRespond]
+Action = Say | Whisper | Emote | GiveItem | GiveCoins | PickUp | Drop | TradeOffer | TradeRespond
 
 # ------------------------------------------------------------------- mutations
 
@@ -141,7 +140,7 @@ class SetTradeStatus:
     status: str
 
 
-Mutation = Union[MoveItem, AdjustCoins, OpenTrade, SetTradeStatus]
+Mutation = MoveItem | AdjustCoins | OpenTrade | SetTradeStatus
 
 
 @dataclass(frozen=True)
