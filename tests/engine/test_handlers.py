@@ -24,8 +24,14 @@ def session():
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     with factory() as s:
-        s.add(World(singleton_id=1, tick=1, cafe_name="The Interval",
-                    cafe_description="A café outside time."))
+        s.add(
+            World(
+                singleton_id=1,
+                tick=1,
+                cafe_name="The Interval",
+                cafe_description="A café outside time.",
+            )
+        )
         s.add(Agent(id="alice", kind="resident", name="Alice", coins=10))
         s.add(Agent(id="bob", kind="resident", name="Bob", coins=10))
         s.add(Agent(id="carol", kind="resident", name="Carol", coins=0))
@@ -123,9 +129,12 @@ def test_pick_up_and_drop_roundtrip(session):
 
 
 def test_trade_lifecycle_happy_path(session):
-    res = execute(session, "alice", "trade_offer",
-                  {"target": "bob", "offer": {"coins": 0, "items": [2]},
-                   "ask": {"coins": 3, "items": []}})
+    res = execute(
+        session,
+        "alice",
+        "trade_offer",
+        {"target": "bob", "offer": {"coins": 0, "items": [2]}, "ask": {"coins": 3, "items": []}},
+    )
     assert res["ok"] is True
     trade_id = res["trade_id"]
 
@@ -139,9 +148,12 @@ def test_trade_lifecycle_happy_path(session):
 
 
 def test_trade_accept_after_item_gone_is_atomic_noop(session):
-    trade_id = execute(session, "alice", "trade_offer",
-                       {"target": "bob", "offer": {"coins": 0, "items": [2]},
-                        "ask": {"coins": 3, "items": []}})["trade_id"]
+    trade_id = execute(
+        session,
+        "alice",
+        "trade_offer",
+        {"target": "bob", "offer": {"coins": 0, "items": [2]}, "ask": {"coins": 3, "items": []}},
+    )["trade_id"]
     # Alice gives the offered notebook away before Bob accepts.
     assert execute(session, "alice", "give", {"target": "carol", "item_id": 2})["ok"] is True
 

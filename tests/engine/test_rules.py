@@ -180,21 +180,35 @@ def test_trade_offer_happy_path():
     cup = ItemView(id=1, name="cup", holder_agent_id="alice")
     res = validate(
         world([alice(), bob()], [cup]),
-        TradeOffer(actor="alice", target="bob", offer={"coins": 0, "items": [1]},
-                   ask={"coins": 3, "items": []}),
+        TradeOffer(
+            actor="alice",
+            target="bob",
+            offer={"coins": 0, "items": [1]},
+            ask={"coins": 3, "items": []},
+        ),
     )
     assert isinstance(res, Ok)
-    assert OpenTrade(proposer_id="alice", target_id="bob",
-                     offer={"coins": 0, "items": [1]}, ask={"coins": 3, "items": []}) \
+    assert (
+        OpenTrade(
+            proposer_id="alice",
+            target_id="bob",
+            offer={"coins": 0, "items": [1]},
+            ask={"coins": 3, "items": []},
+        )
         in res.mutations
+    )
 
 
 def test_trade_offer_unowned_item_rejected():
     cup = ItemView(id=1, name="cup", holder_agent_id="bob")
     res = validate(
         world([alice(), bob()], [cup]),
-        TradeOffer(actor="alice", target="bob", offer={"coins": 0, "items": [1]},
-                   ask={"coins": 1, "items": []}),
+        TradeOffer(
+            actor="alice",
+            target="bob",
+            offer={"coins": 0, "items": [1]},
+            ask={"coins": 1, "items": []},
+        ),
     )
     assert isinstance(res, Err) and res.code == Code.NOT_HOLDER
 
@@ -202,8 +216,12 @@ def test_trade_offer_unowned_item_rejected():
 def test_trade_offer_overdrawn_coins_rejected():
     res = validate(
         world([alice(coins=2), bob()]),
-        TradeOffer(actor="alice", target="bob", offer={"coins": 5, "items": []},
-                   ask={"coins": 0, "items": []}),
+        TradeOffer(
+            actor="alice",
+            target="bob",
+            offer={"coins": 5, "items": []},
+            ask={"coins": 0, "items": []},
+        ),
     )
     assert isinstance(res, Err) and res.code == Code.INSUFFICIENT_COINS
 
@@ -234,8 +252,9 @@ def test_trade_decline():
 
 def test_trade_respond_by_non_target_rejected():
     res = validate(
-        world([alice(), bob()], [ItemView(id=1, name="cup", holder_agent_id="alice")],
-              [_open_trade()]),
+        world(
+            [alice(), bob()], [ItemView(id=1, name="cup", holder_agent_id="alice")], [_open_trade()]
+        ),
         TradeRespond(actor="alice", trade_id=7, accept=True),
     )
     assert isinstance(res, Err) and res.code == Code.NOT_TRADE_TARGET
@@ -247,11 +266,18 @@ def test_trade_respond_missing_trade_rejected():
 
 
 def test_trade_respond_settled_trade_rejected():
-    settled = TradeView(id=7, proposer_id="alice", target_id="bob",
-                        offer={"coins": 0, "items": []}, ask={"coins": 0, "items": []},
-                        status="declined")
-    res = validate(world([alice(), bob()], trades=[settled]),
-                   TradeRespond(actor="bob", trade_id=7, accept=True))
+    settled = TradeView(
+        id=7,
+        proposer_id="alice",
+        target_id="bob",
+        offer={"coins": 0, "items": []},
+        ask={"coins": 0, "items": []},
+        status="declined",
+    )
+    res = validate(
+        world([alice(), bob()], trades=[settled]),
+        TradeRespond(actor="bob", trade_id=7, accept=True),
+    )
     assert isinstance(res, Err) and res.code == Code.TRADE_NOT_OPEN
 
 
