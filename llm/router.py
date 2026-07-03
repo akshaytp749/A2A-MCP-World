@@ -107,10 +107,14 @@ def _openai_compat_generate(
     messages = ([{"role": "system", "content": system}] if system else []) + [
         {"role": "user", "content": prompt}
     ]
+    body: dict = {"model": model, "messages": messages, "max_tokens": max_tokens}
+    if "gpt-oss" in model:
+        # reasoning model: hidden reasoning eats the completion budget; keep it short
+        body["reasoning_effort"] = "low"
     response = httpx.post(
         f"{base_url}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
-        json={"model": model, "messages": messages, "max_tokens": max_tokens},
+        json=body,
         timeout=60,
     )
     response.raise_for_status()

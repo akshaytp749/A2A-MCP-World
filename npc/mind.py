@@ -24,6 +24,9 @@ logger = logging.getLogger("npc.mind")
 MAX_ACTIONS = 3  # FR-2.3
 MAX_REPLIES = 2  # client-side politeness; engine-side pair cap is FR-3.4
 MAX_MEMORIES = 3
+# Reasoning models (gpt-oss) spend hidden reasoning tokens from the same
+# completion budget — a tight cap truncates the JSON plan mid-string.
+DECIDE_MAX_TOKENS = 1600
 ACTING_TOOLS = {
     "say",
     "whisper",
@@ -159,7 +162,11 @@ class Mind:
             default=str,
         )
         text = self._generate_or_none(
-            tick, system=self.system_prompt, prompt=prompt, max_tokens=700, name="decide"
+            tick,
+            system=self.system_prompt,
+            prompt=prompt,
+            max_tokens=DECIDE_MAX_TOKENS,
+            name="decide",
         )
         plan = _extract_json(text) if text is not None else None
         if plan is None and text is not None:
@@ -168,10 +175,17 @@ class Mind:
                 tick,
                 system="Return ONLY the corrected JSON object. No prose.",
                 prompt=f"This was not valid JSON for the required plan schema:\n{text}",
-                max_tokens=700,
+                max_tokens=DECIDE_MAX_TOKENS,
                 name="repair",
             )
             plan = _extract_json(text) if text is not None else None
+            if plan is None and text is not None:
+                logger.warning(
+                    "plan parse failed for %s tick %s even after repair; raw head: %r",
+                    self.config.id,
+                    tick,
+                    text[:120],
+                )
         return plan or {"thought": "", "actions": [], "replies": [], "new_memories": []}
 
     def _generate_or_none(self, tick: int, **kw) -> str | None:
@@ -184,9 +198,14 @@ class Mind:
                 tier=self.config.model_tier, agent_id=self.config.id, tick=tick, **kw
             )
         except Exception as exc:
-            logger.warning("LLM %s failed for %s tick %s: %s: %s",
-                           kw.get("name", "call"), self.config.id, tick,
-                           type(exc).__name__, str(exc)[:200])
+            logger.warning(
+                "LLM %s failed for %s tick %s: %s: %s",
+                kw.get("name", "call"),
+                self.config.id,
+                tick,
+                type(exc).__name__,
+                str(exc)[:200],
+            )
             return None
 
     # ----------------------------------------------------------------------- act
@@ -207,7 +226,7 @@ class Mind:
                     tick,
                     system="Fix the failed tool call. " + PLAN_SCHEMA,
                     prompt=json.dumps({"failed_action": action, "error": res}),
-                    max_tokens=200,
+                    max_tokens=400,
                     name="retry",
                 )
                 fixed = (_extract_json(fix_text) if fix_text is not None else None) or {}
