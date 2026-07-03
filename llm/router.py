@@ -11,21 +11,24 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 
-# Rolling aliases track Google's newest STABLE flash models (currently
-# 3.5-flash / 3.1-flash-lite GA) so we never pin a retired id. Published free
-# tier for stable flash-class models: ~1,500 req/day, 10-15 RPM (resets
-# midnight PT). Measured 2026-07-03: legacy 2.5 models are capped at 20/day
-# and 2.0 models are retired (limit 0) — do not fall back to those.
-# Revisit tiering after M3 coherence evals (FR-2.5); Groq is the next rung.
+# Raced live 2026-07-03 (latency incl. network / persona quality / free RPD):
+#   groq openai/gpt-oss-120b   0.9s  excellent   ~1,000/day   <- mid primary
+#   groq llama-3.3-70b         0.8s  very good    1,000/day
+#   groq llama-3.1-8b-instant  0.6s  plain       14,400/day
+#   gemini-flash-latest        4.1s  very good   ~1,500/day (10 RPM)
+#   gemini-flash-lite-latest   1.1s  good        ~1,500/day   <- cheap primary
+# Gemini legacy: 2.5 models capped at 20/day, 2.0 retired — never route there.
+# 'provider:' prefix selects the backend; bare ids go to Gemini. Cheap stays
+# on Gemini to spread load across providers. Revisit after M3 evals (FR-2.5).
 TIER_MODELS = {
     "cheap": "gemini-flash-lite-latest",  # background decide, compaction, filters
-    "mid": "gemini-flash-latest",  # focal NPC decide, coherence judge
+    "mid": "groq:openai/gpt-oss-120b",  # focal NPC decide, coherence judge
 }
 # When a tier's primary model is quota-exhausted, degrade down this chain
 # rather than going silent (same idea as FR-4.4: quiet beats crashed).
 TIER_FALLBACKS = {
-    "cheap": [],
-    "mid": ["gemini-flash-lite-latest"],
+    "cheap": ["groq:llama-3.1-8b-instant"],
+    "mid": ["gemini-flash-latest"],
 }
 # Cross-provider last-resort rungs, tried after the tier chain and only when
 # the key is present in env. Free tiers (measured/published 2026-07):
