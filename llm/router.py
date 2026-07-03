@@ -11,21 +11,21 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 
-# Measured live 2026-07-03 on this key's free tier:
-#   gemini-2.5-flash / 2.5-flash-lite : 20 requests/DAY per model (tiny)
-#   gemini-2.0-flash / 2.0-flash-lite : limit 0 (retired from free tier)
-#   gemini-3-flash-preview : small daily pool; 3.1-flash-lite-preview : largest pool
-# Quota buckets are per-model, so tiers on different models don't compete.
-# Revisit after M3 coherence evals (FR-2.5); a Groq key is the next lever.
+# Rolling aliases track Google's newest STABLE flash models (currently
+# 3.5-flash / 3.1-flash-lite GA) so we never pin a retired id. Published free
+# tier for stable flash-class models: ~1,500 req/day, 10-15 RPM (resets
+# midnight PT). Measured 2026-07-03: legacy 2.5 models are capped at 20/day
+# and 2.0 models are retired (limit 0) — do not fall back to those.
+# Revisit tiering after M3 coherence evals (FR-2.5); Groq is the next rung.
 TIER_MODELS = {
-    "cheap": "gemini-3.1-flash-lite-preview",  # background decide, compaction, filters
-    "mid": "gemini-3-flash-preview",  # focal NPC decide, coherence judge
+    "cheap": "gemini-flash-lite-latest",  # background decide, compaction, filters
+    "mid": "gemini-flash-latest",  # focal NPC decide, coherence judge
 }
 # When a tier's primary model is quota-exhausted, degrade down this chain
 # rather than going silent (same idea as FR-4.4: quiet beats crashed).
 TIER_FALLBACKS = {
     "cheap": [],
-    "mid": ["gemini-3.1-flash-lite-preview"],
+    "mid": ["gemini-flash-lite-latest"],
 }
 TICK_CEILING = 6  # FR-2.3: max LLM calls per NPC per tick
 DAILY_QUOTA_DEFAULT = 1000  # pinned here, not in docs (ARCHITECTURE §7)
