@@ -19,10 +19,13 @@ async def send_to_npc(
     tick: int,
     world: str = "the-interval",
     httpx_client: httpx.AsyncClient | None = None,
+    extra_metadata: dict | None = None,
 ) -> str:
     """Send one A2A message/send to the NPC at target_url; return the reply text."""
     message = new_text_message(text, role=Role.ROLE_USER)
     message.metadata.update({"world": world, "tick": tick, "from_character": from_character})
+    if extra_metadata:
+        message.metadata.update(extra_metadata)
 
     card = minimal_agent_card(target_url, transports=[TransportProtocol.JSONRPC])
     config = ClientConfig(streaming=False, httpx_client=httpx_client)

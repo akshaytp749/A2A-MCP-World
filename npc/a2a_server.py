@@ -30,12 +30,17 @@ class InboxItem:
     text: str
     tick: int
     world: str = ""
+    visitor: bool = False
+    visitor_name: str = ""
 
 
 @dataclass
 class NpcState:
     config: NpcConfig
     inbox: list[InboxItem] = field(default_factory=list)
+    # Set by the runtime once the mind exists: async (InboxItem) -> reply text.
+    # Visitor messages are answered inline (FR-5.2); NPC↔NPC still queues.
+    visitor_reply_fn: object = None
 
     def drain_inbox(self) -> list[InboxItem]:
         items, self.inbox = self.inbox, []
@@ -81,7 +86,23 @@ class QueueingExecutor(AgentExecutor):
             text=text,
             tick=int(meta.get("tick", 0)),
             world=str(meta.get("world", "")),
+            visitor=bool(meta.get("visitor", False)),
+            visitor_name=str(meta.get("visitor_name", "")),
         )
+
+        # Visitors are answered inline (FR-5.2) — a human won't wait for a tick.
+        if item.visitor and self.state.visitor_reply_fn is not None:
+            try:
+                reply_text = await self.state.visitor_reply_fn(item)
+            except Exception:
+                reply_text = ""
+            if reply_text:
+                reply = new_text_message(reply_text, role=Role.ROLE_AGENT)
+                reply.metadata.update({"inline": True})
+                await event_queue.enqueue_event(reply)
+                return
+            # fall through to the queued path if the mind couldn't answer
+
         self.state.inbox.append(item)
         ack = new_text_message(
             f"{self.state.config.name} nods — your words will be answered in due time.",

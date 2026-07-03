@@ -93,6 +93,7 @@ def create_app() -> FastAPI:
         engine = McpEngineClient(engine_url, token)
         app.state.engine = engine
         app.state.mind = Mind(config, engine, peers)
+        state.visitor_reply_fn = app.state.mind.reply_to_visitor  # inline (FR-5.2)
         # Seed biographical memories iff the agent has none yet — idempotent
         # even if an earlier boot died between registration and seeding.
         existing = await engine.call("recall", {"query": "", "k": 1})

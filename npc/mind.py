@@ -265,6 +265,44 @@ class Mind:
             n += 1
         return n
 
+    # ----------------------------------------------------------------- visitors
+
+    async def reply_to_visitor(self, item: InboxItem) -> str:
+        """Inline in-character reply to a human visitor (FR-5.2) + memory (FR-5.3)."""
+        name = item.visitor_name or item.from_character
+        memories = (await self.engine.call("recall", {"query": name[:80], "k": 5})).get(
+            "memories", []
+        )
+        text = self._generate_or_none(
+            item.tick,
+            system=self.system_prompt,
+            prompt=json.dumps(
+                {
+                    "a_visitor_speaks_to_you": {"name": name, "text": item.text},
+                    "your_memories_of_them": memories,
+                    "instruction": (
+                        "Reply directly to the visitor, in character, 1-4 sentences. "
+                        "If you have memories of them, let it show naturally. "
+                        "Return ONLY the reply text — no JSON here."
+                    ),
+                },
+                ensure_ascii=False,
+            ),
+            max_tokens=DECIDE_MAX_TOKENS,
+            name="visitor-reply",
+        )
+        if not text:
+            return ""
+        text = text.strip()
+        await self.engine.call(
+            "remember",
+            {
+                "content": f"Visitor {name} said: {item.text[:200]!r}. I replied: {text[:200]!r}",
+                "salience": 0.6,
+            },
+        )
+        return text
+
     # ------------------------------------------------------------------ run tick
 
     async def run_tick(self, tick: int, inbox: list[InboxItem]) -> dict:
