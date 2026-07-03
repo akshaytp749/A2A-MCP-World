@@ -24,8 +24,9 @@ class FakeModel:
         self.calls: list[dict] = []
 
     def __call__(self, *, model, system, prompt, max_tokens) -> LLMResult:
-        self.calls.append({"model": model, "system": system, "prompt": prompt,
-                           "max_tokens": max_tokens})
+        self.calls.append(
+            {"model": model, "system": system, "prompt": prompt, "max_tokens": max_tokens}
+        )
         return LLMResult(text="ok", input_tokens=10, output_tokens=2, model=model)
 
 
@@ -101,8 +102,9 @@ def test_daily_quota_blocks_further_calls(fake):
 
 def test_quota_warn_hook_fires_once_at_80_percent(fake):
     warned = []
-    router = make_router(fake, daily_quota=10, on_quota_warn=lambda used, quota:
-                         warned.append((used, quota)))
+    router = make_router(
+        fake, daily_quota=10, on_quota_warn=lambda used, quota: warned.append((used, quota))
+    )
     for i in range(9):
         router.generate(tier="cheap", agent_id="a", tick=i, prompt="hi")
     assert warned == [(8, 10)]  # fired exactly once, at 80%
