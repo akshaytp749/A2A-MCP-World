@@ -155,3 +155,37 @@ def test_whole_chain_dead_raises_and_records_nothing():
     with pytest.raises(RuntimeError):
         router.generate(tier="mid", agent_id="socrates", tick=1, prompt="hi")
     assert router.usage()["used_today"] == 0
+
+
+# -------------------------------------------------------- cross-provider rungs
+
+
+def test_provider_rungs_skipped_without_keys(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    from llm.router import provider_rungs
+
+    assert provider_rungs() == []
+
+
+def test_provider_rung_reached_when_gemini_chain_dead(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    from llm.router import TIER_FALLBACKS
+
+    dead = {TIER_MODELS["mid"], *TIER_FALLBACKS["mid"]}
+    fake = QuotaExhaustedModel(dead_models=dead)
+    router = LLMRouter(generate_fn=fake, langfuse_enabled=False)
+    out = router.generate(tier="mid", agent_id="socrates", tick=1, prompt="hi")
+    assert out == "ok"
+    assert fake.attempts[-1] == "groq:llama-3.3-70b-versatile"
+    assert router.usage()["used_today"] == 1
+
+
+def test_provider_model_overridable_via_env(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    from llm.router import provider_rungs
+
+    assert provider_rungs() == ["groq:llama-3.1-8b-instant"]

@@ -27,6 +27,31 @@ TIER_FALLBACKS = {
     "cheap": [],
     "mid": ["gemini-flash-lite-latest"],
 }
+# Cross-provider last-resort rungs, tried after the tier chain and only when
+# the key is present in env. Free tiers (measured/published 2026-07):
+# Groq ~1,000 req/day no card; OpenRouter :free models 50 req/day no card
+# (1,000/day after a one-time $10 credit purchase — optional, off by default).
+# Override the model per provider via GROQ_MODEL / OPENROUTER_MODEL.
+PROVIDER_FALLBACKS = [
+    ("GROQ_API_KEY", "groq", "GROQ_MODEL", "llama-3.3-70b-versatile"),
+    (
+        "OPENROUTER_API_KEY",
+        "openrouter",
+        "OPENROUTER_MODEL",
+        "meta-llama/llama-3.3-70b-instruct:free",
+    ),
+]
+
+
+def provider_rungs() -> list[str]:
+    """'provider:model' entries for every provider whose key is configured."""
+    rungs = []
+    for key_env, provider, model_env, default_model in PROVIDER_FALLBACKS:
+        if os.environ.get(key_env):
+            rungs.append(f"{provider}:{os.environ.get(model_env, default_model)}")
+    return rungs
+
+
 TICK_CEILING = 6  # FR-2.3: max LLM calls per NPC per tick
 DAILY_QUOTA_DEFAULT = 1000  # pinned here, not in docs (ARCHITECTURE §7)
 WARN_FRACTION = 0.8
@@ -70,6 +95,55 @@ def _gemini_generate(*, model: str, system: str, prompt: str, max_tokens: int) -
     )
 
 
+def _openai_compat_generate(
+    *, base_url: str, api_key: str, model: str, system: str, prompt: str, max_tokens: int
+) -> LLMResult:
+    """Groq and OpenRouter both speak the OpenAI chat-completions dialect."""
+    import httpx
+
+    messages = ([{"role": "system", "content": system}] if system else []) + [
+        {"role": "user", "content": prompt}
+    ]
+    response = httpx.post(
+        f"{base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"model": model, "messages": messages, "max_tokens": max_tokens},
+        timeout=60,
+    )
+    response.raise_for_status()
+    data = response.json()
+    usage = data.get("usage", {})
+    return LLMResult(
+        text=data["choices"][0]["message"]["content"] or "",
+        input_tokens=int(usage.get("prompt_tokens", 0)),
+        output_tokens=int(usage.get("completion_tokens", 0)),
+        model=model,
+    )
+
+
+def _default_generate(*, model: str, system: str, prompt: str, max_tokens: int) -> LLMResult:
+    """Dispatch on 'provider:' prefix; bare model ids go to Gemini."""
+    if model.startswith("groq:"):
+        return _openai_compat_generate(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=os.environ["GROQ_API_KEY"],
+            model=model.removeprefix("groq:"),
+            system=system,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        )
+    if model.startswith("openrouter:"):
+        return _openai_compat_generate(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            model=model.removeprefix("openrouter:"),
+            system=system,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        )
+    return _gemini_generate(model=model, system=system, prompt=prompt, max_tokens=max_tokens)
+
+
 class LLMRouter:
     def __init__(
         self,
@@ -81,7 +155,7 @@ class LLMRouter:
         langfuse_enabled: bool | None = None,
         today: Callable[[], date] = date.today,
     ):
-        self._generate = generate_fn or _gemini_generate
+        self._generate = generate_fn or _default_generate
         self.daily_quota = daily_quota
         self.tick_ceiling = tick_ceiling
         self._on_quota_warn = on_quota_warn
@@ -149,7 +223,7 @@ class LLMRouter:
         if tier not in TIER_MODELS:
             raise ValueError(f"unknown tier '{tier}' (know: {sorted(TIER_MODELS)})")
         self._check_budgets(agent_id, tick)
-        chain = [TIER_MODELS[tier], *TIER_FALLBACKS.get(tier, [])]
+        chain = [TIER_MODELS[tier], *TIER_FALLBACKS.get(tier, []), *provider_rungs()]
 
         last_exc: Exception | None = None
         for model in chain:
