@@ -11,7 +11,7 @@ from engine.auth import hash_token, new_token
 from engine.config import settings
 from engine.db import init_db, session_scope
 from engine.mcp_server import build_mcp
-from engine.models import Agent, World
+from engine.models import Agent, Event, World
 from engine.seed import load_seed, seed_world
 
 
@@ -85,6 +85,30 @@ def _register_routes(app: FastAPI) -> None:
             world = session.get(World, 1)
             world.paused = body.paused
         return {"paused": body.paused}
+
+    @app.get("/admin/events", dependencies=[Depends(require_admin)])
+    def list_events(since_tick: int = 0, limit: int = 500) -> dict:
+        with session_scope() as session:
+            rows = list(
+                session.scalars(
+                    select(Event)
+                    .where(Event.tick >= since_tick)
+                    .order_by(Event.id.desc())
+                    .limit(limit)
+                )
+            )
+            events = [
+                {
+                    "id": e.id,
+                    "tick": e.tick,
+                    "actor_id": e.actor_id,
+                    "tool": e.tool,
+                    "payload": e.payload,
+                    "ok": e.result.get("ok"),
+                }
+                for e in reversed(rows)
+            ]
+        return {"events": events}
 
     @app.get("/admin/agents", dependencies=[Depends(require_admin)])
     def list_agents() -> dict:

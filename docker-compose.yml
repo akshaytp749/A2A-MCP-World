@@ -1,4 +1,6 @@
-# THE deployment (SPEC §4): engine + Postgres on your own machine, $0.
+# THE deployment (SPEC §4): engine + Postgres + NPCs on your own machine, $0.
+# Core stack: engine + db + Twain + Tesla. The other three residents are in
+# the "full" profile: docker compose --profile full up -d
 services:
   db:
     image: postgres:16-alpine
@@ -23,6 +25,83 @@ services:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  npc-twain:
+    build: .
+    command: uvicorn npc.runtime:create_app --factory --host 0.0.0.0 --port 9000
+    environment: &npc-env
+      ENGINE_URL: http://engine:8000
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-}
+      PEERS: '{"twain": "http://npc-twain:9000", "tesla": "http://npc-tesla:9000",
+               "socrates": "http://npc-socrates:9000", "darwin": "http://npc-darwin:9000",
+               "ramanujan": "http://npc-ramanujan:9000"}'
+      NPC_ID: twain
+      PUBLIC_URL: http://npc-twain:9000
+    ports: ["9001:9000"]
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  npc-tesla:
+    build: .
+    command: uvicorn npc.runtime:create_app --factory --host 0.0.0.0 --port 9000
+    environment:
+      <<: *npc-env
+      NPC_ID: tesla
+      PUBLIC_URL: http://npc-tesla:9000
+    ports: ["9002:9000"]
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  npc-socrates:
+    build: .
+    profiles: ["full"]
+    command: uvicorn npc.runtime:create_app --factory --host 0.0.0.0 --port 9000
+    environment:
+      <<: *npc-env
+      NPC_ID: socrates
+      PUBLIC_URL: http://npc-socrates:9000
+    ports: ["9003:9000"]
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  npc-darwin:
+    build: .
+    profiles: ["full"]
+    command: uvicorn npc.runtime:create_app --factory --host 0.0.0.0 --port 9000
+    environment:
+      <<: *npc-env
+      NPC_ID: darwin
+      PUBLIC_URL: http://npc-darwin:9000
+    ports: ["9004:9000"]
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  npc-ramanujan:
+    build: .
+    profiles: ["full"]
+    command: uvicorn npc.runtime:create_app --factory --host 0.0.0.0 --port 9000
+    environment:
+      <<: *npc-env
+      NPC_ID: ramanujan
+      PUBLIC_URL: http://npc-ramanujan:9000
+    ports: ["9005:9000"]
+    depends_on:
+      engine:
         condition: service_healthy
 
 volumes:
