@@ -117,3 +117,41 @@ def test_usage_snapshot_reports_counts(fake):
     usage = router.usage()
     assert usage["used_today"] == 4
     assert usage["daily_quota"] == 50
+
+
+# ------------------------------------------------------------- fallback chain
+
+
+class QuotaExhaustedModel:
+    """Primary model 429s; fallback model succeeds. Records every attempt."""
+
+    def __init__(self, dead_models: set[str]):
+        self.dead = dead_models
+        self.attempts: list[str] = []
+
+    def __call__(self, *, model, system, prompt, max_tokens) -> LLMResult:
+        self.attempts.append(model)
+        if model in self.dead:
+            raise RuntimeError("429 RESOURCE_EXHAUSTED")
+        return LLMResult(text="ok", input_tokens=1, output_tokens=1, model=model)
+
+
+def test_mid_tier_falls_back_when_primary_exhausted():
+    from llm.router import TIER_FALLBACKS
+
+    fake = QuotaExhaustedModel(dead_models={TIER_MODELS["mid"]})
+    router = LLMRouter(generate_fn=fake, langfuse_enabled=False)
+    out = router.generate(tier="mid", agent_id="socrates", tick=1, prompt="hi")
+    assert out == "ok"
+    assert fake.attempts == [TIER_MODELS["mid"], *TIER_FALLBACKS["mid"]]
+    assert router.usage()["used_today"] == 1  # one successful request recorded
+
+
+def test_whole_chain_dead_raises_and_records_nothing():
+    from llm.router import TIER_FALLBACKS
+
+    fake = QuotaExhaustedModel(dead_models={TIER_MODELS["mid"], *TIER_FALLBACKS["mid"]})
+    router = LLMRouter(generate_fn=fake, langfuse_enabled=False)
+    with pytest.raises(RuntimeError):
+        router.generate(tier="mid", agent_id="socrates", tick=1, prompt="hi")
+    assert router.usage()["used_today"] == 0

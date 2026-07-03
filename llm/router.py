@@ -14,12 +14,18 @@ from datetime import date
 # Measured live 2026-07-03 on this key's free tier:
 #   gemini-2.5-flash / 2.5-flash-lite : 20 requests/DAY per model (tiny)
 #   gemini-2.0-flash / 2.0-flash-lite : limit 0 (retired from free tier)
-#   gemini-3-flash-preview / 3.1-flash-lite-preview : working free quota
+#   gemini-3-flash-preview : small daily pool; 3.1-flash-lite-preview : largest pool
 # Quota buckets are per-model, so tiers on different models don't compete.
-# Revisit after M3 coherence evals (FR-2.5); Groq fallback is the next lever.
+# Revisit after M3 coherence evals (FR-2.5); a Groq key is the next lever.
 TIER_MODELS = {
     "cheap": "gemini-3.1-flash-lite-preview",  # background decide, compaction, filters
     "mid": "gemini-3-flash-preview",  # focal NPC decide, coherence judge
+}
+# When a tier's primary model is quota-exhausted, degrade down this chain
+# rather than going silent (same idea as FR-4.4: quiet beats crashed).
+TIER_FALLBACKS = {
+    "cheap": [],
+    "mid": ["gemini-3.1-flash-lite-preview"],
 }
 TICK_CEILING = 6  # FR-2.3: max LLM calls per NPC per tick
 DAILY_QUOTA_DEFAULT = 1000  # pinned here, not in docs (ARCHITECTURE §7)
@@ -143,28 +149,33 @@ class LLMRouter:
         if tier not in TIER_MODELS:
             raise ValueError(f"unknown tier '{tier}' (know: {sorted(TIER_MODELS)})")
         self._check_budgets(agent_id, tick)
-        model = TIER_MODELS[tier]
+        chain = [TIER_MODELS[tier], *TIER_FALLBACKS.get(tier, [])]
 
-        span = None
-        if self._langfuse_enabled:
-            span = self._start_span(name, model, agent_id, tick, tier, system, prompt)
-        try:
-            result = self._generate(
-                model=model, system=system, prompt=prompt, max_tokens=max_tokens
-            )
-        except Exception:
+        last_exc: Exception | None = None
+        for model in chain:
+            span = None
+            if self._langfuse_enabled:
+                span = self._start_span(name, model, agent_id, tick, tier, system, prompt)
+            try:
+                result = self._generate(
+                    model=model, system=system, prompt=prompt, max_tokens=max_tokens
+                )
+            except Exception as exc:
+                last_exc = exc
+                if span is not None:
+                    span.update(level="ERROR", status_message="generation failed")
+                    span.end()
+                continue  # quota/outage on this model — degrade down the chain
+            self._record(agent_id, tick)
             if span is not None:
-                span.update(level="ERROR", status_message="generation failed")
+                span.update(
+                    output=result.text,
+                    usage_details={"input": result.input_tokens, "output": result.output_tokens},
+                )
                 span.end()
-            raise
-        self._record(agent_id, tick)
-        if span is not None:
-            span.update(
-                output=result.text,
-                usage_details={"input": result.input_tokens, "output": result.output_tokens},
-            )
-            span.end()
-        return result.text
+            return result.text
+        assert last_exc is not None
+        raise last_exc
 
     @staticmethod
     def _start_span(name, model, agent_id, tick, tier, system, prompt):
