@@ -8,18 +8,21 @@ writes are to the `visitors` table, which is the gateway's own domain.
 
 import asyncio
 import json
+import logging
 import re
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from engine.db import session_scope
 from engine.heartbeat import presence
 from engine.models import Agent, Event, Visitor, World
 from npc.a2a_client import send_to_npc
+
+logger = logging.getLogger("gateway")
 
 router = APIRouter(prefix="/gateway", tags=["gateway"])
 
@@ -66,13 +69,20 @@ async def chat(body: ChatBody) -> dict:
         world = session.get(World, 1)
         tick = world.tick if world else 0
 
-    reply = await send_to_npc(
-        endpoint,
-        body.text,
-        from_character=vid,
-        tick=tick,
-        extra_metadata={"visitor": True, "visitor_name": body.display_name},
-    )
+    try:
+        reply = await send_to_npc(
+            endpoint,
+            body.text,
+            from_character=vid,
+            tick=tick,
+            extra_metadata={"visitor": True, "visitor_name": body.display_name},
+        )
+    except Exception:
+        logger.exception("A2A delivery to %s failed", body.target)
+        raise HTTPException(
+            status_code=503,
+            detail=f"{npc.name} seems lost in thought — give them a moment and try again.",
+        ) from None
     return {"ok": True, "from": body.target, "reply": reply, "visitor_id": vid}
 
 
@@ -98,8 +108,15 @@ def room() -> dict:
 
 
 @router.get("/events")
-async def events_stream(since_id: int = 0):
-    """SSE feed of public room happenings (whispers stay private)."""
+async def events_stream(since_id: int = -1):
+    """SSE feed of public room happenings (whispers stay private).
+
+    since_id=-1 (default) streams from NOW — new visitors shouldn't replay
+    the world's entire history into their feed.
+    """
+    if since_id < 0:
+        with session_scope() as session:
+            since_id = session.scalar(select(func.max(Event.id))) or 0
 
     async def stream():
         last_id = since_id

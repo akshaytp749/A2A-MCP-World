@@ -28,6 +28,10 @@ async def send_to_npc(
         message.metadata.update(extra_metadata)
 
     card = minimal_agent_card(target_url, transports=[TransportProtocol.JSONRPC])
+    if httpx_client is None:
+        # Inline visitor replies include an LLM call — the SDK's default
+        # timeout is far too impatient for that.
+        httpx_client = httpx.AsyncClient(timeout=90)
     config = ClientConfig(streaming=False, httpx_client=httpx_client)
     client = await create_client(card, client_config=config)
 

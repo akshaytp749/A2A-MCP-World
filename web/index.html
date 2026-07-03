@@ -21,13 +21,17 @@
   @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
   #stage { position:relative; width:100%; }
   canvas { width:100%; display:block; image-rendering: pixelated; image-rendering: crisp-edges;
-           border:3px solid #33291e; border-radius:4px; background:#000; cursor:pointer; }
+           border:3px solid #33291e; border-radius:4px; background:#000; }
   #banner { position:absolute; top:8px; left:50%; transform:translateX(-50%);
-            background:#000c; color:var(--accent); padding:4px 12px; font-size:12px;
-            border:2px solid var(--accent); display:none; max-width:90%; }
+            background:#000d; color:var(--accent); padding:4px 12px; font-size:12px;
+            border:2px solid var(--accent); display:none; max-width:90%; text-align:center; }
+  #banner.alert { color:#e07a6a; border-color:#e07a6a; }
+  #hint { position:absolute; bottom:8px; left:10px; color:#e8ddcbaa; font-size:11px;
+          background:#0009; padding:2px 8px; pointer-events:none; }
   #feed { margin-top:8px; max-height:20vh; overflow-y:auto; font-size:12px; color:var(--dim);
           background:var(--panel); border:2px solid #33291e; border-radius:4px; padding:8px; }
   #feed .actor { color:var(--accent); }
+  #feed .tk { color:#5f5442; }
   .panel { background:var(--panel); border:3px solid #33291e; border-radius:4px; padding:12px;
            display:flex; flex-direction:column; }
   .panel h2 { font-size:12px; color:var(--dim); margin-bottom:8px; }
@@ -36,9 +40,12 @@
              font-size:13px; }
   #chatlog div { margin:6px 0; }
   #chatlog .me { color:#8fb573; }
+  #chatlog .pending { color:var(--dim); font-style:italic; }
   input, select, button { background:#241c14; color:var(--ink); border:2px solid #3d2f20;
       border-radius:4px; padding:8px; font:inherit; }
+  input:focus { outline:none; border-color:var(--accent); }
   button { cursor:pointer; background:#3d2f20; } button:hover { background:#4d3b28; }
+  button:disabled { opacity:.5; cursor:wait; }
   .row { display:flex; gap:6px; margin-top:6px; }
   .row input[type=text] { flex:1; min-width:0; }
   footer { padding:8px 16px; color:var(--dim); font-size:11px; border-top:3px solid #33291e;
@@ -56,8 +63,9 @@
 <main>
   <section id="left">
     <div id="stage">
-      <canvas id="game" width="384" height="216"></canvas>
+      <canvas id="game" width="416" height="234"></canvas>
       <div id="banner" class="pixel"></div>
+      <div id="hint">click a patron to talk</div>
     </div>
     <div id="feed"></div>
   </section>
@@ -94,17 +102,16 @@ const $ = id => document.getElementById(id);
 $('name').value = localStorage.getItem('interval-name') || '';
 
 /* ---------------------------------------------------------- pixel sprites
-   12x16 grids; each char is a palette key, '.' = transparent. Hand-drawn —
-   no game engine, no asset pipeline, no cost. */
+   12x16 grids drawn at 2x; each char is a palette key, '.' = transparent. */
 const PAL = {
-  k:'#1b1410', s:'#e8b98a', S:'#c98d5a',           // outline, skin, skin shade
-  w:'#f2ede3', g:'#b9b2a4', G:'#7d7668',           // white suit, grey, dark grey
-  b:'#23201f', B:'#3a3733',                        // black suit
-  t:'#d9cdb2', T:'#b3a688',                        // toga
-  v:'#4a3524', V:'#2f2318',                        // victorian browns
-  c:'#f5f0e0', d:'#6b5233', o:'#e77'  ,            // cream, dhoti-brown, accent red
-  u:'#5878a8', U:'#3c5578',                        // visitor blues
-  y:'#f0b95a', z:'#88e0ff'                         // gold, spark blue
+  k:'#1b1410', s:'#e8b98a', S:'#c98d5a',
+  w:'#f2ede3', g:'#b9b2a4', G:'#7d7668',
+  b:'#23201f', B:'#3a3733',
+  t:'#d9cdb2', T:'#b3a688',
+  v:'#4a3524', V:'#2f2318',
+  c:'#f5f0e0', d:'#6b5233',
+  u:'#5878a8', U:'#3c5578',
+  y:'#f0b95a', z:'#88e0ff'
 };
 const SPRITES = {
 twain: `
@@ -210,14 +217,16 @@ visitor: `
 ..kk..kk....
 ............`};
 
-function drawSprite(ctx, key, x, y, scale=1) {
+const SC = 2, SPR_W = 12*SC, SPR_H = 16*SC;   // sprites render at 2x
+
+function drawSprite(ctx, key, x, y) {
   const rows = SPRITES[key].trim().split('\n');
   for (let r = 0; r < rows.length; r++)
     for (let c = 0; c < rows[r].length; c++) {
       const ch = rows[r][c];
       if (ch !== '.' && PAL[ch]) {
         ctx.fillStyle = PAL[ch];
-        ctx.fillRect(x + c*scale, y + r*scale, scale, scale);
+        ctx.fillRect(x + c*SC, y + r*SC, SC, SC);
       }
     }
 }
@@ -229,106 +238,121 @@ const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
 
 function paintRoom() {
   const b = bg.getContext('2d');
-  // floor planks
-  for (let y = 64; y < H; y += 12) {
-    b.fillStyle = (y/12) % 2 ? '#3a2a1a' : '#332517';
+  for (let y = 66, i = 0; y < H; y += 12, i++) {
+    b.fillStyle = i % 2 ? '#3a2a1a' : '#332517';
     b.fillRect(0, y, W, 12);
     b.fillStyle = '#2a1e12';
-    for (let x = ((y/12)%2)*24; x < W; x += 48) b.fillRect(x, y, 2, 12);
+    for (let x = (i%2)*24; x < W; x += 48) b.fillRect(x, y, 2, 12);
   }
-  // back wall
-  b.fillStyle = '#241a10'; b.fillRect(0, 0, W, 64);
-  b.fillStyle = '#1b1309'; b.fillRect(0, 60, W, 4);
-  // chalkboard with equations
-  b.fillStyle = '#12241c'; b.fillRect(12, 8, 100, 44);
-  b.strokeStyle = '#5a4630'; b.lineWidth = 3; b.strokeRect(12, 8, 100, 44);
+  b.fillStyle = '#241a10'; b.fillRect(0, 0, W, 66);
+  b.fillStyle = '#1b1309'; b.fillRect(0, 62, W, 4);
+  // chalkboard
+  b.fillStyle = '#12241c'; b.fillRect(12, 8, 106, 46);
+  b.strokeStyle = '#5a4630'; b.lineWidth = 3; b.strokeRect(12, 8, 106, 46);
   b.fillStyle = '#9fd0b5'; b.font = '7px monospace';
   ['∂ψ=iħ…  e^iπ+1=0', '1+1/1!+1/2!+…=e', 'f(x)≈Σ aₙxⁿ  ∇×B', 'π(x)~x/ln x   ∞'].forEach(
-    (t, i) => b.fillText(t, 17, 19 + i*10));
-  // bar counter
-  b.fillStyle = '#5a3d22'; b.fillRect(128, 34, 176, 22);
-  b.fillStyle = '#6e4c2c'; b.fillRect(128, 34, 176, 5);
-  b.fillStyle = '#3d2914'; b.fillRect(128, 56, 176, 4);
-  // bottles on shelf
-  b.fillStyle = '#241a10'; b.fillRect(140, 6, 150, 20);
-  const bottleCols = ['#7b3f2a','#3f6b4a','#8a6f2e','#5878a8','#7b3f2a','#8a6f2e'];
-  bottleCols.forEach((ccol, i) => { b.fillStyle = ccol; b.fillRect(146 + i*24, 10, 7, 16); });
+    (t, i) => b.fillText(t, 17, 20 + i*10));
+  // bar + bottles
+  b.fillStyle = '#5a3d22'; b.fillRect(134, 36, 190, 24);
+  b.fillStyle = '#6e4c2c'; b.fillRect(134, 36, 190, 5);
+  b.fillStyle = '#3d2914'; b.fillRect(134, 60, 190, 4);
+  b.fillStyle = '#241a10'; b.fillRect(146, 6, 166, 22);
+  ['#7b3f2a','#3f6b4a','#8a6f2e','#5878a8','#7b3f2a','#8a6f2e','#3f6b4a'].forEach(
+    (col, i) => { b.fillStyle = col; b.fillRect(152 + i*23, 10, 7, 17); });
   // gas lamps
-  [70, 200, 330].forEach(x => {
+  [76, 216, 356].forEach(x => {
     b.fillStyle = '#2a2118'; b.fillRect(x-1, 0, 2, 10);
     b.fillStyle = '#f0b95a'; b.fillRect(x-4, 10, 8, 8);
     b.fillStyle = '#fff3c9'; b.fillRect(x-2, 12, 4, 4);
   });
-  // courtyard door (right) with stars
-  b.fillStyle = '#080d1a'; b.fillRect(318, 6, 58, 50);
-  b.strokeStyle = '#5a4630'; b.strokeRect(318, 6, 58, 50);
+  // courtyard doorway
+  b.fillStyle = '#080d1a'; b.fillRect(344, 6, 62, 52);
+  b.strokeStyle = '#5a4630'; b.strokeRect(344, 6, 62, 52);
   b.fillStyle = '#e8ddcb';
-  [[326,14],[340,10],[355,20],[365,12],[333,30],[350,38],[368,32],[344,24]].forEach(
+  [[352,14],[366,10],[381,20],[393,12],[359,30],[376,40],[396,34],[370,24]].forEach(
     ([x,y]) => b.fillRect(x, y, 2, 2));
-  b.fillStyle = '#88e0ff'; b.fillRect(358, 44, 3, 3); // the sundial glints
+  b.fillStyle = '#88e0ff'; b.fillRect(386, 46, 3, 3);
   // tables
-  [[60, 120], [180, 150], [300, 120]].forEach(([x, y]) => {
-    b.fillStyle = '#2a1e12'; b.fillRect(x+4, y+16, 6, 14); b.fillRect(x+26, y+16, 6, 14);
-    b.fillStyle = '#5a3d22'; b.fillRect(x, y, 36, 18);
-    b.fillStyle = '#6e4c2c'; b.fillRect(x, y, 36, 4);
+  [[52, 128], [186, 162], [318, 128]].forEach(([x, y]) => {
+    b.fillStyle = '#2a1e12'; b.fillRect(x+4, y+18, 6, 14); b.fillRect(x+30, y+18, 6, 14);
+    b.fillStyle = '#5a3d22'; b.fillRect(x, y, 40, 20);
+    b.fillStyle = '#6e4c2c'; b.fillRect(x, y, 40, 4);
   });
   // rug
-  b.fillStyle = '#4a2a2a'; b.fillRect(140, 96, 100, 40);
-  b.strokeStyle = '#6e4444'; b.strokeRect(144, 100, 92, 32);
+  b.fillStyle = '#4a2a2a'; b.fillRect(150, 100, 110, 44);
+  b.strokeStyle = '#6e4444'; b.strokeRect(154, 104, 102, 36);
 }
 paintRoom();
 
 /* ---------------------------------------------------- actors + animation */
-const SPOTS = [[40,86],[96,140],[150,100],[210,170],[250,96],[320,150],[280,170],
-               [70,170],[160,140],[330,90]];
-const actors = new Map();  // id -> actor
+const SPOTS = [[36,84],[100,150],[160,102],[226,180],[268,100],[340,158],[300,180],
+               [60,180],[170,150],[356,92],[120,110]];
+const actors = new Map();
 
 function addActor(id, name, spriteKey) {
-  if (actors.has(id)) return;
+  if (actors.has(id)) return actors.get(id);
   const [x, y] = SPOTS[actors.size % SPOTS.length];
-  actors.set(id, { id, name, spriteKey, x, y, tx: x, ty: y,
-                   bubble: null, bubbleUntil: 0, phase: Math.random()*6 });
+  const a = { id, name, spriteKey, x, y, tx: x, ty: y, queue: [],
+              bubble: null, bubbleUntil: 0, thinking: false,
+              phase: Math.random()*6, nextMove: 0 };
+  actors.set(id, a);
+  return a;
 }
 
 function wander(a, now) {
-  if (a.id === selected) return;                       // your interlocutor stays put
-  if (!a.nextMove || now > a.nextMove) {
+  if (a.id === selected || a.id === 'you' || a.id === hovered) {
+    /* conversation partners (and anyone you point at) stand still */ }
+  else if (now > a.nextMove) {
     const [sx, sy] = SPOTS[Math.floor(Math.random()*SPOTS.length)];
     a.tx = sx; a.ty = sy;
-    a.nextMove = now + 5000 + Math.random()*9000;
+    a.nextMove = now + 6000 + Math.random()*10000;
   }
   const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
-  if (d > 1) { a.x += dx/d * 0.35; a.y += dy/d * 0.35; }
+  if (d > 1) { a.x += dx/d * 0.4; a.y += dy/d * 0.4; }
 }
 
 function say(id, text, emote=false) {
   const a = actors.get(id);
   if (!a) return;
-  a.bubble = (emote ? '* ' : '') + text.slice(0, 120) + (text.length > 120 ? '…' : '');
-  a.bubbleUntil = performance.now() + Math.min(12000, 3500 + text.length * 40);
+  const t = (emote ? '* ' : '') + text.slice(0, 140) + (text.length > 140 ? '…' : '');
+  a.queue.push(t);               // queued: one bubble at a time per actor
+  if (a.queue.length > 4) a.queue.shift();
 }
 
-function drawBubble(a) {
+function layoutBubble(a, text, placed) {
   ctx.font = '8px monospace';
-  const words = a.bubble.split(' '); const lines = ['']; const maxW = 130;
+  const words = text.split(' '); const lines = ['']; const maxW = 140;
   for (const w of words) {
     const t = lines[lines.length-1] + (lines[lines.length-1] ? ' ' : '') + w;
     if (ctx.measureText(t).width > maxW) lines.push(w); else lines[lines.length-1] = t;
   }
   const bw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 10;
   const bh = lines.length * 9 + 8;
-  let bx = Math.min(Math.max(4, a.x + 6 - bw/2), W - bw - 4);
+  let bx = Math.min(Math.max(4, a.x + SPR_W/2 - bw/2), W - bw - 4);
   let by = Math.max(4, a.y - bh - 6);
+  // collision: nudge up (then down) until clear of already-placed bubbles
+  const hits = r => placed.some(p => !(r.x+r.w < p.x || p.x+p.w < r.x ||
+                                       r.y+r.h < p.y || p.y+p.h < r.y));
+  let rect = {x:bx, y:by, w:bw, h:bh}, guard = 0;
+  while (hits(rect) && guard++ < 24) {
+    rect.y -= 10;
+    if (rect.y < 4) { rect.y = Math.min(H - bh - 4, a.y + SPR_H + 4); break; }
+  }
+  placed.push(rect);
+  return {lines, bw, bh, bx: rect.x, by: rect.y};
+}
+
+function drawBubble(a, text, placed) {
+  const {lines, bw, bh, bx, by} = layoutBubble(a, text, placed);
   ctx.fillStyle = '#f5f0e0'; ctx.strokeStyle = '#1b1410'; ctx.lineWidth = 2;
   ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh);
-  ctx.fillStyle = '#f5f0e0';
-  ctx.fillRect(a.x + 3, by + bh - 1, 6, 5);   // tail
+  if (by < a.y) ctx.fillRect(a.x + SPR_W/2 - 3, by + bh - 1, 6, Math.min(6, a.y - by - bh + 2));
   ctx.fillStyle = '#1b1410';
   lines.forEach((l, i) => ctx.fillText(l, bx + 5, by + 12 + i*9));
 }
 
-let selected = null;
-let clockTint = 'evening';
+let selected = null, hovered = null;
+let clockTint = 'evening', worldPaused = false;
 const TINTS = { morning:'rgba(255,230,170,0.06)', midday:'rgba(255,255,255,0)',
                 afternoon:'rgba(255,200,120,0.05)', evening:'rgba(60,30,60,0.14)',
                 night:'rgba(10,15,50,0.24)', 'small hours':'rgba(5,8,40,0.30)' };
@@ -339,56 +363,106 @@ function frame(now) {
   const list = [...actors.values()].sort((p, q) => p.y - q.y);
   for (const a of list) {
     wander(a, now);
-    const bob = Math.round(Math.sin(now/280 + a.phase) * 1.5);
-    if (a.id === selected) {                       // selection ring
-      ctx.strokeStyle = '#f0b95a'; ctx.lineWidth = 1;
-      ctx.strokeRect(a.x - 2, a.y + bob - 2, 16, 20);
+    // advance the bubble queue
+    if ((!a.bubble || now > a.bubbleUntil) ) {
+      a.bubble = null;
+      if (a.queue.length) {
+        a.bubble = a.queue.shift();
+        a.bubbleUntil = now + Math.min(11000, 3200 + a.bubble.length * 45);
+      }
     }
-    drawSprite(ctx, a.spriteKey, a.x, a.y + bob, 1);
+    const bob = Math.round(Math.sin(now/280 + a.phase) * 1.5);
+    if (a.id === hovered && a.id !== selected) {
+      ctx.strokeStyle = '#e8ddcb88'; ctx.lineWidth = 1;
+      ctx.strokeRect(a.x - 2, a.y + bob - 2, SPR_W + 4, SPR_H + 2);
+    }
+    if (a.id === selected) {
+      ctx.strokeStyle = '#f0b95a'; ctx.lineWidth = 1;
+      ctx.strokeRect(a.x - 2, a.y + bob - 2, SPR_W + 4, SPR_H + 2);
+    }
+    drawSprite(ctx, a.spriteKey, a.x, a.y + bob);
     ctx.font = '7px monospace'; ctx.textAlign = 'center';
-    ctx.fillStyle = '#000a'; ctx.fillRect(a.x + 6 - 22, a.y + 17, 44, 9);
+    const label = a.name.toUpperCase();
+    const lw = ctx.measureText(label).width + 6;
+    ctx.fillStyle = '#000b';
+    ctx.fillRect(a.x + SPR_W/2 - lw/2, a.y + SPR_H + 1, lw, 9);
     ctx.fillStyle = a.id === selected ? '#f0b95a' : '#e8ddcb';
-    ctx.fillText(a.name.toUpperCase(), a.x + 6, a.y + 24);
+    ctx.fillText(label, a.x + SPR_W/2, a.y + SPR_H + 8);
     ctx.textAlign = 'left';
   }
-  for (const a of list)
-    if (a.bubble && now < a.bubbleUntil) drawBubble(a); else a.bubble = a.bubble && null;
+  const placed = [];
+  for (const a of list) {
+    if (a.thinking) {
+      const dots = '.'.repeat(1 + Math.floor(now/400) % 3);
+      drawBubble(a, dots, placed);
+    } else if (a.bubble && now < a.bubbleUntil) {
+      drawBubble(a, a.bubble, placed);
+    }
+  }
   ctx.fillStyle = TINTS[clockTint] ?? TINTS.evening;
   ctx.fillRect(0, 0, W, H);
+  if (worldPaused) { ctx.fillStyle = 'rgba(20,5,5,0.25)'; ctx.fillRect(0, 0, W, H); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-cv.addEventListener('click', ev => {
+function actorAt(ev) {
   const r = cv.getBoundingClientRect();
   const mx = (ev.clientX - r.left) * W / r.width, my = (ev.clientY - r.top) * H / r.height;
-  let best = null, bestD = 24;
+  let best = null, bestD = 30;
   for (const a of actors.values()) {
-    if (a.spriteKey === 'visitor') continue;
-    const d = Math.hypot(a.x + 6 - mx, a.y + 8 - my);
+    if (a.id === 'you') continue;
+    const d = Math.hypot(a.x + SPR_W/2 - mx, a.y + SPR_H/2 - my);
     if (d < bestD) { best = a; bestD = d; }
   }
-  if (best) {
-    selected = best.id;
-    $('target').textContent = best.name;
-    $('msg').focus();
+  return best;
+}
+
+cv.addEventListener('mousemove', ev => {
+  const a = actorAt(ev);
+  hovered = a ? a.id : null;
+  cv.style.cursor = a ? 'pointer' : 'default';
+});
+
+cv.addEventListener('click', ev => {
+  const a = actorAt(ev);
+  if (a) {
+    selected = a.id;
+    $('target').textContent = a.name;
+    $('hint').style.display = 'none';
+    const you = actors.get('you');
+    if (you) walkVisitorTo(a);
+    ($('name').value.trim() ? $('msg') : $('name')).focus();
   }
 });
+
+function walkVisitorTo(npc) {
+  const you = actors.get('you');
+  if (!you) return;
+  you.tx = Math.min(W - SPR_W - 6, Math.max(6, npc.x + (npc.x < W/2 ? 34 : -34)));
+  you.ty = Math.min(H - SPR_H - 12, Math.max(70, npc.y + 4));
+}
 
 /* ---------------------------------------------------------- world state */
 async function loadRoom() {
   const r = await (await fetch('/gateway/room')).json();
   $('cafe').textContent = r.cafe.toUpperCase();
   clockTint = r.clock_time;
+  worldPaused = r.paused;
   $('worldmeta').innerHTML = `TICK ${r.tick} · ${r.clock_time} · ${r.weather}` +
     (r.paused ? ' · <span class="paused">PAUSED</span>' : '');
+  if (r.paused) { $('banner').textContent = 'THE WORLD IS PAUSED';
+                  $('banner').classList.add('alert'); $('banner').style.display = 'block'; }
+  else if ($('banner').classList.contains('alert')) {
+    $('banner').style.display = 'none'; $('banner').classList.remove('alert');
+  }
   const ids = new Set();
   for (const o of r.occupants) {
     ids.add(o.id);
     addActor(o.id, o.name.split(' ').pop(), SPRITES[o.id] ? o.id : 'visitor');
   }
   for (const id of [...actors.keys()])
-    if (!ids.has(id) && actors.get(id).spriteKey !== 'visitor') actors.delete(id);
+    if (!ids.has(id) && id !== 'you') actors.delete(id);
   $('ejectsel').innerHTML = r.occupants.map(o =>
     `<option value="${o.id}">${o.name}</option>`).join('');
 }
@@ -403,16 +477,20 @@ es.onmessage = ev => {
   if (e.tool === 'event_seed') banner(e.text);
   if (e.tool === 'eject') actors.delete(e.actor);
   const div = document.createElement('div');
-  div.innerHTML = `<span class="actor">${e.actor}</span> <em>${e.tool}</em> ${e.text || ''}`;
+  div.innerHTML = `<span class="tk">[t${e.tick}]</span> ` +
+    `<span class="actor">${e.actor}</span> <em>${e.tool}</em> ${e.text || ''}`;
   $('feed').prepend(div);
   while ($('feed').children.length > 60) $('feed').lastChild.remove();
 };
 
 let bannerTimer = null;
 function banner(text) {
+  if (worldPaused) return;
   $('banner').textContent = text; $('banner').style.display = 'block';
   clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(() => $('banner').style.display = 'none', 12000);
+  bannerTimer = setTimeout(() => {
+    if (!$('banner').classList.contains('alert')) $('banner').style.display = 'none';
+  }, 12000);
 }
 
 /* ----------------------------------------------------------------- chat */
@@ -422,32 +500,44 @@ function log(cls, who, text) {
   div.textContent = `${who}: ${text}`;
   $('chatlog').appendChild(div);
   $('chatlog').scrollTop = $('chatlog').scrollHeight;
+  return div;
 }
 
 async function send() {
   const name = $('name').value.trim(), text = $('msg').value.trim();
-  if (!name || !text) return;
-  if (!selected) { log('me', 'system', 'click a patron in the café first'); return; }
+  if (!name) { $('name').focus(); return; }
+  if (!text) { $('msg').focus(); return; }
+  if (!selected) { log('pending', 'system', 'click a patron in the café first'); return; }
   localStorage.setItem('interval-name', name);
-  addActor('you', name, 'visitor');
+  const you = addActor('you', name, 'visitor');
+  const npc = actors.get(selected);
+  if (npc) walkVisitorTo(npc);
   say('you', text);
   log('me', name, text);
   $('msg').value = ''; $('send').disabled = true;
+  const npcName = npc?.name || selected;
+  const pending = log('pending', npcName, '…');
+  if (npc) npc.thinking = true;
   try {
     const res = await fetch('/gateway/chat', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({display_name: name, target: selected, text}),
     });
     const data = await res.json();
-    const npcName = actors.get(selected)?.name || selected;
     const reply = res.ok ? data.reply : (data.detail || 'something went wrong');
+    pending.className = 'npc';
+    pending.textContent = `${npcName}: ${reply}`;
     say(selected, reply);
-    log('npc', npcName, reply);
-  } catch (e) { log('npc', 'system', 'the café did not answer: ' + e); }
+  } catch (e) {
+    pending.textContent = 'system: the café did not answer — ' + e;
+  }
+  if (npc) npc.thinking = false;
   $('send').disabled = false;
+  $('msg').focus();
 }
 $('send').onclick = send;
 $('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+$('name').addEventListener('keydown', e => { if (e.key === 'Enter') $('msg').focus(); });
 
 /* ------------------------------------------------------------- operator */
 async function op(kind, arg) {
