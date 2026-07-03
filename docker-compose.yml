@@ -10,6 +10,8 @@ services:
       POSTGRES_DB: interval
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # host access for scripts (eval, invariants); 5433 avoids collisions
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U interval"]
       interval: 3s
