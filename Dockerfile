@@ -7,6 +7,7 @@ COPY llm ./llm
 COPY npc ./npc
 COPY gateway ./gateway
 COPY gate ./gate
+COPY web ./web
 COPY world ./world
 COPY scripts ./scripts
 

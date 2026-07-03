@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -118,6 +119,25 @@ def _register_routes(app: FastAPI) -> None:
             ]
         return {"events": events}
 
+    @app.post("/admin/eject/{agent_id}", dependencies=[Depends(require_admin)])
+    def eject(agent_id: str) -> dict:
+        with session_scope() as session:
+            agent = session.get(Agent, agent_id)
+            if agent is None:
+                raise HTTPException(status_code=404, detail=f"no agent '{agent_id}'")
+            agent.status = "ejected"
+            world = session.get(World, 1)
+            session.add(
+                Event(
+                    tick=world.tick if world else 0,
+                    actor_id=agent_id,
+                    tool="eject",
+                    payload={"text": f"{agent.name} packs up and leaves."},
+                    result={"ok": True},
+                )
+            )
+        return {"id": agent_id, "status": "ejected"}
+
     @app.get("/admin/agents", dependencies=[Depends(require_admin)])
     def list_agents() -> dict:
         with session_scope() as session:
@@ -153,6 +173,18 @@ def create_app() -> FastAPI:
     app = FastAPI(title="The Interval — World Engine", lifespan=lifespan)
     app.mount("/mcp", mcp.streamable_http_app())
     _register_routes(app)
+
+    from gateway.routes import router as gateway_router
+
+    app.include_router(gateway_router)
+
+    ui = Path("web/index.html")
+    if ui.exists():
+
+        @app.get("/", include_in_schema=False)
+        def index() -> FileResponse:
+            return FileResponse(ui)
+
     return app
 
 

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Interval</title>
+<style>
+  :root { --bg:#14100d; --panel:#1e1813; --ink:#e8ddcb; --dim:#9b8c74; --accent:#c9a35c; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.5 Georgia, 'Times New Roman', serif;
+         min-height:100vh; display:flex; flex-direction:column; }
+  header { padding:14px 20px; border-bottom:1px solid #33291e; display:flex; gap:14px;
+           align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:22px; color:var(--accent); font-weight:normal; letter-spacing:1px; }
+  header .meta { color:var(--dim); font-size:13px; }
+  main { flex:1; display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; padding:14px 20px;
+         max-width:1200px; width:100%; margin:0 auto; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .panel { background:var(--panel); border:1px solid #33291e; border-radius:8px; padding:14px;
+           display:flex; flex-direction:column; min-height:0; }
+  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:2px; color:var(--dim);
+              margin-bottom:8px; }
+  #description { font-style:italic; color:var(--dim); margin-bottom:10px; font-size:14px; }
+  #occupants { margin-bottom:10px; font-size:14px; }
+  #occupants span { display:inline-block; background:#2a2118; border-radius:12px;
+                    padding:2px 10px; margin:2px; }
+  #feed { flex:1; overflow-y:auto; max-height:52vh; font-size:14px; }
+  #feed div { padding:4px 0; border-bottom:1px dotted #2a2118; }
+  #feed .actor { color:var(--accent); }
+  #feed .tool { color:var(--dim); font-size:12px; }
+  #chatlog { flex:1; overflow-y:auto; max-height:44vh; margin-bottom:10px; font-size:14px; }
+  #chatlog .me { color:#8fb573; }
+  #chatlog .npc { color:var(--ink); }
+  #chatlog div { margin:6px 0; }
+  input, select, button, textarea { background:#241c14; color:var(--ink); border:1px solid #3d2f20;
+      border-radius:6px; padding:8px; font:inherit; }
+  button { cursor:pointer; background:#3d2f20; } button:hover { background:#4d3b28; }
+  .row { display:flex; gap:8px; margin-top:6px; }
+  .row input[type=text] { flex:1; }
+  footer { padding:10px 20px; color:var(--dim); font-size:12px; border-top:1px solid #33291e;
+           text-align:center; }
+  details { margin-top:10px; color:var(--dim); font-size:13px; }
+  details .row { flex-wrap:wrap; }
+  #opstatus { margin-top:6px; font-size:12px; min-height:16px; }
+  .paused { color:#c96b5c; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="cafe">The Interval</h1>
+  <span class="meta" id="worldmeta">…</span>
+</header>
+<main>
+  <section class="panel">
+    <h2>The Room</h2>
+    <div id="description"></div>
+    <div id="occupants"></div>
+    <h2>Happenings</h2>
+    <div id="feed"></div>
+  </section>
+  <section class="panel">
+    <h2>Talk</h2>
+    <div class="row">
+      <input type="text" id="name" placeholder="Your name">
+      <select id="npc"></select>
+    </div>
+    <div id="chatlog"></div>
+    <div class="row">
+      <input type="text" id="msg" placeholder="Say something…">
+      <button id="send">Send</button>
+    </div>
+    <details>
+      <summary>Operator</summary>
+      <div class="row">
+        <input type="password" id="admintoken" placeholder="admin token">
+        <button onclick="op('pause', true)">Pause</button>
+        <button onclick="op('pause', false)">Resume</button>
+      </div>
+      <div class="row">
+        <select id="ejectsel"></select>
+        <button onclick="op('eject')">Eject</button>
+      </div>
+      <div id="opstatus"></div>
+    </details>
+  </section>
+</main>
+<footer>
+  Fictional AI portrayals of historical figures — not affiliated with their estates.
+</footer>
+<script>
+const $ = id => document.getElementById(id);
+$('name').value = localStorage.getItem('interval-name') || '';
+
+async function loadRoom() {
+  const r = await (await fetch('/gateway/room')).json();
+  $('cafe').textContent = r.cafe;
+  $('worldmeta').innerHTML = `tick ${r.tick} · ${r.clock_time} · ${r.weather}` +
+    (r.paused ? ' · <span class="paused">PAUSED</span>' : '');
+  $('description').textContent = r.description;
+  $('occupants').innerHTML = r.occupants.map(o => `<span>${o.name}</span>`).join('');
+  const opts = r.occupants.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+  if ($('npc').innerHTML !== opts) { $('npc').innerHTML = opts; $('ejectsel').innerHTML = opts; }
+}
+loadRoom(); setInterval(loadRoom, 15000);
+
+const es = new EventSource('/gateway/events');
+es.onmessage = ev => {
+  const e = JSON.parse(ev.data);
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="actor">${e.actor}</span> ` +
+                  `<span class="tool">${e.tool}</span> ${e.text || ''}`;
+  $('feed').prepend(div);
+  while ($('feed').children.length > 80) $('feed').lastChild.remove();
+};
+
+function log(cls, who, text) {
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = `${who}: ${text}`;
+  $('chatlog').appendChild(div);
+  $('chatlog').scrollTop = $('chatlog').scrollHeight;
+}
+
+async function send() {
+  const name = $('name').value.trim(), text = $('msg').value.trim(), target = $('npc').value;
+  if (!name || !text || !target) return;
+  localStorage.setItem('interval-name', name);
+  log('me', name, text);
+  $('msg').value = ''; $('send').disabled = true;
+  try {
+    const res = await fetch('/gateway/chat', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({display_name: name, target, text}),
+    });
+    const data = await res.json();
+    log('npc', $('npc').selectedOptions[0].textContent,
+        res.ok ? data.reply : (data.detail || 'something went wrong'));
+  } catch (e) { log('npc', 'system', 'the café did not answer: ' + e); }
+  $('send').disabled = false;
+}
+$('send').onclick = send;
+$('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+async function op(kind, arg) {
+  const token = $('admintoken').value.trim();
+  if (!token) { $('opstatus').textContent = 'admin token required'; return; }
+  const headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'};
+  let res;
+  if (kind === 'pause')
+    res = await fetch('/admin/pause', {method:'POST', headers, body: JSON.stringify({paused: arg})});
+  else
+    res = await fetch('/admin/eject/' + $('ejectsel').value, {method:'POST', headers});
+  $('opstatus').textContent = res.ok ? `${kind} ok` : `${kind} failed: ${res.status}`;
+  loadRoom();
+}
+</script>
+</body>
+</html>

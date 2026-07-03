@@ -3,7 +3,6 @@
 NPC↔NPC messages still queue for the next tick (FR-3.3).
 """
 
-
 import httpx
 import pytest
 
