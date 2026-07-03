@@ -44,48 +44,50 @@ class ScriptedBot:
 
     async def take_turn(self, tick: int) -> None:
         headers = {"Authorization": f"Bearer {self.token}"}
-        async with streamablehttp_client(self.mcp_url, headers=headers) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
+        async with (
+            streamablehttp_client(self.mcp_url, headers=headers) as (read, write, _),
+            ClientSession(read, write) as session,
+        ):
+            await session.initialize()
 
-                async def call(tool: str, args: dict | None = None) -> dict:
-                    res = _parse(await session.call_tool(tool, args or {}))
-                    self.results.append({"tool": tool, "args": args or {}, "res": res})
-                    return res
+            async def call(tool: str, args: dict | None = None) -> dict:
+                res = _parse(await session.call_tool(tool, args or {}))
+                self.results.append({"tool": tool, "args": args or {}, "res": res})
+                return res
 
-                me = await call("look")
-                await self._respond_to_trades(call, me, tick)
+            me = await call("look")
+            await self._respond_to_trades(call, me, tick)
 
-                step = tick % 6
-                if step == 0:
-                    await call("say", {"text": f"[{self.id}] tick {tick}: all well."})
-                elif step == 1:
-                    free = me.get("items", [])
-                    if free:
-                        await call("pick_up", {"item_id": free[0]["id"]})
-                elif step == 2:
-                    if me.get("you", {}).get("coins", 0) >= 1:
-                        await call("give", {"target": self.peer_id, "coins": 1})
-                elif step == 3:
-                    held = me.get("you", {}).get("items", [])
-                    if held:
-                        await call("drop", {"item_id": held[0]["id"]})
-                elif step == 4:
-                    if me.get("you", {}).get("coins", 0) >= 1:
-                        await call(
-                            "trade_offer",
-                            {
-                                "target": self.peer_id,
-                                "offer": {"coins": 1, "items": []},
-                                "ask": {"coins": 1, "items": []},
-                            },
-                        )
-                elif step == 5:
+            step = tick % 6
+            if step == 0:
+                await call("say", {"text": f"[{self.id}] tick {tick}: all well."})
+            elif step == 1:
+                free = me.get("items", [])
+                if free:
+                    await call("pick_up", {"item_id": free[0]["id"]})
+            elif step == 2:
+                if me.get("you", {}).get("coins", 0) >= 1:
+                    await call("give", {"target": self.peer_id, "coins": 1})
+            elif step == 3:
+                held = me.get("you", {}).get("items", [])
+                if held:
+                    await call("drop", {"item_id": held[0]["id"]})
+            elif step == 4:
+                if me.get("you", {}).get("coins", 0) >= 1:
                     await call(
-                        "whisper",
-                        {"target": self.peer_id, "text": f"[{self.id}] between us: tick {tick}."},
+                        "trade_offer",
+                        {
+                            "target": self.peer_id,
+                            "offer": {"coins": 1, "items": []},
+                            "ask": {"coins": 1, "items": []},
+                        },
                     )
-                    await call("emote", {"text": "taps the bar thoughtfully"})
+            elif step == 5:
+                await call(
+                    "whisper",
+                    {"target": self.peer_id, "text": f"[{self.id}] between us: tick {tick}."},
+                )
+                await call("emote", {"text": "taps the bar thoughtfully"})
 
     async def _respond_to_trades(self, call, me: dict, tick: int) -> None:
         """Accept open trades addressed to me (decline if I can't afford the ask)."""
