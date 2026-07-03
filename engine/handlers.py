@@ -202,6 +202,7 @@ def _recall_events(session: Session, actor_id: str, args: dict) -> dict:
                 "actor_id": e.actor_id,
                 "tool": e.tool,
                 "payload": e.payload,
+                "result": e.result,
                 "ok": e.result.get("ok"),
             }
         )

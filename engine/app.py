@@ -1,0 +1,110 @@
+"""World Engine service: /health, admin API, and the MCP mount (ARCHITECTURE §2.1)."""
+
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+
+from engine.auth import hash_token, new_token
+from engine.config import settings
+from engine.db import init_db, session_scope
+from engine.mcp_server import build_mcp
+from engine.models import Agent, World
+from engine.seed import load_seed, seed_world
+
+
+def require_admin(authorization: str | None = Header(default=None)) -> None:
+    expected = f"Bearer {settings.admin_token}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="admin token required")
+
+
+class CreateAgent(BaseModel):
+    id: str = Field(pattern=r"^[a-z0-9][a-z0-9\-]{1,40}$")  # slugs (conventions)
+    name: str
+    kind: str = "resident"
+    coins: int = 10
+
+
+class SetPaused(BaseModel):
+    paused: bool
+
+
+def _register_routes(app: FastAPI) -> None:
+    @app.get("/health")
+    def health() -> dict:
+        with session_scope() as session:
+            world = session.get(World, 1)
+            tick = world.tick if world else -1
+        return {"status": "ok", "tick": tick}
+
+    @app.post("/admin/agents", dependencies=[Depends(require_admin)])
+    def create_agent(body: CreateAgent) -> dict:
+        with session_scope() as session:
+            if session.get(Agent, body.id) is not None:
+                raise HTTPException(status_code=409, detail=f"agent '{body.id}' exists")
+            token = new_token()
+            session.add(
+                Agent(
+                    id=body.id,
+                    kind=body.kind,
+                    name=body.name,
+                    coins=body.coins,
+                    token_hash=hash_token(token),
+                    status="active",
+                )
+            )
+        # The plaintext token is returned exactly once and never stored or logged.
+        return {"id": body.id, "token": token}
+
+    @app.post("/admin/tick", dependencies=[Depends(require_admin)])
+    def advance_tick() -> dict:
+        with session_scope() as session:
+            world = session.get(World, 1)
+            if world is None:
+                raise HTTPException(status_code=500, detail="world not seeded")
+            world.tick += 1
+            tick = world.tick
+        return {"tick": tick}
+
+    @app.post("/admin/pause", dependencies=[Depends(require_admin)])
+    def set_paused(body: SetPaused) -> dict:
+        with session_scope() as session:
+            world = session.get(World, 1)
+            world.paused = body.paused
+        return {"paused": body.paused}
+
+    @app.get("/admin/agents", dependencies=[Depends(require_admin)])
+    def list_agents() -> dict:
+        with session_scope() as session:
+            agents = [
+                {"id": a.id, "name": a.name, "kind": a.kind, "status": a.status, "coins": a.coins}
+                for a in session.scalars(select(Agent))
+            ]
+        return {"agents": agents}
+
+
+def create_app() -> FastAPI:
+    """App factory: each app owns a fresh FastMCP (its session manager runs once)."""
+    mcp = build_mcp()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        init_db()
+        seed_path = Path(settings.seed_path)
+        if seed_path.exists():
+            with session_scope() as session:
+                seed_world(session, load_seed(seed_path))
+        # The MCP session manager must run for the mounted streamable-HTTP app.
+        async with mcp.session_manager.run():
+            yield
+
+    app = FastAPI(title="The Interval — World Engine", lifespan=lifespan)
+    app.mount("/mcp", mcp.streamable_http_app())
+    _register_routes(app)
+    return app
+
+
+app = create_app()  # uvicorn entrypoint: engine.app:app
