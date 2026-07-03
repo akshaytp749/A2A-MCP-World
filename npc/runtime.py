@@ -28,16 +28,27 @@ from npc.mind import Mind
 def _register_with_engine(engine_url: str, admin_token: str, config: NpcConfig) -> tuple[str, bool]:
     """Create (or re-key) this NPC's agent row. Returns (bearer token, created_now)."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    public_url = os.environ.get("PUBLIC_URL", "http://127.0.0.1:9000")
     with httpx.Client(base_url=engine_url, timeout=15) as client:
         res = client.post(
             "/admin/agents",
             headers=headers,
-            json={"id": config.id, "name": config.name, "kind": "resident", "coins": 10},
+            json={
+                "id": config.id,
+                "name": config.name,
+                "kind": "resident",
+                "coins": 10,
+                "endpoint_url": public_url,
+            },
         )
         if res.status_code == 200:
             return res.json()["token"], True
         if res.status_code == 409:
-            res = client.post(f"/admin/agents/{config.id}/token", headers=headers)
+            res = client.post(
+                f"/admin/agents/{config.id}/token",
+                headers=headers,
+                json={"endpoint_url": public_url},
+            )
             res.raise_for_status()
             return res.json()["token"], False
         res.raise_for_status()

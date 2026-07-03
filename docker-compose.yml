@@ -21,6 +21,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://interval:interval@db:5432/interval
       ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
+      HEARTBEAT_ENABLED: "1"
+      LLM_AGGREGATE_DAILY_QUOTA: "2000"
     ports:
       - "8000:8000"
     depends_on:

@@ -26,6 +26,11 @@ class CreateAgent(BaseModel):
     name: str
     kind: str = "resident"
     coins: int = 10
+    endpoint_url: str | None = None  # NPC's A2A/tick base url (heartbeat webhooks)
+
+
+class RotateToken(BaseModel):
+    endpoint_url: str | None = None  # refresh the endpoint on re-registration
 
 
 class SetPaused(BaseModel):
@@ -52,6 +57,7 @@ def _register_routes(app: FastAPI) -> None:
                     kind=body.kind,
                     name=body.name,
                     coins=body.coins,
+                    endpoint_url=body.endpoint_url,
                     token_hash=hash_token(token),
                     status="active",
                 )
@@ -60,13 +66,15 @@ def _register_routes(app: FastAPI) -> None:
         return {"id": body.id, "token": token}
 
     @app.post("/admin/agents/{agent_id}/token", dependencies=[Depends(require_admin)])
-    def rotate_token(agent_id: str) -> dict:
+    def rotate_token(agent_id: str, body: RotateToken | None = None) -> dict:
         with session_scope() as session:
             agent = session.get(Agent, agent_id)
             if agent is None:
                 raise HTTPException(status_code=404, detail=f"no agent '{agent_id}'")
             token = new_token()
             agent.token_hash = hash_token(token)
+            if body is not None and body.endpoint_url:
+                agent.endpoint_url = body.endpoint_url
         return {"id": agent_id, "token": token}
 
     @app.post("/admin/tick", dependencies=[Depends(require_admin)])
@@ -131,9 +139,16 @@ def create_app() -> FastAPI:
         if seed_path.exists():
             with session_scope() as session:
                 seed_world(session, load_seed(seed_path))
+        scheduler = None
+        if settings.heartbeat_enabled:
+            from engine.heartbeat import start_heartbeat
+
+            scheduler = start_heartbeat()
         # The MCP session manager must run for the mounted streamable-HTTP app.
         async with mcp.session_manager.run():
             yield
+        if scheduler is not None:
+            scheduler.shutdown(wait=False)
 
     app = FastAPI(title="The Interval — World Engine", lifespan=lifespan)
     app.mount("/mcp", mcp.streamable_http_app())
