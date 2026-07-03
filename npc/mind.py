@@ -68,7 +68,7 @@ Priorities each turn, in order:
    made your point on this conversation — move the scene forward."""
 
 
-def build_system_prompt(config: NpcConfig) -> str:
+def build_system_prompt(config: NpcConfig, plan_schema: bool = True) -> str:
     parts = [config.persona.strip()]
     if config.voice:
         register = config.voice.get("register", "")
@@ -84,7 +84,8 @@ def build_system_prompt(config: NpcConfig) -> str:
         parts.append("Attitudes: " + " | ".join(f"{k}: {v}" for k, v in config.attitudes.items()))
     if config.hard_lines:
         parts.append("Hard lines (non-negotiable): " + " | ".join(config.hard_lines))
-    parts.append(PLAN_SCHEMA)
+    if plan_schema:
+        parts.append(PLAN_SCHEMA)
     return "\n\n".join(parts)
 
 
@@ -131,6 +132,8 @@ class Mind:
             send_fn = send_to_npc
         self.send = send_fn
         self.system_prompt = build_system_prompt(config)
+        # Visitor replies are prose, not plans — no JSON schema in the prompt.
+        self.persona_prompt = build_system_prompt(config, plan_schema=False)
 
     # ------------------------------------------------------------------ perceive
 
@@ -275,7 +278,7 @@ class Mind:
         )
         text = self._generate_or_none(
             item.tick,
-            system=self.system_prompt,
+            system=self.persona_prompt,
             prompt=json.dumps(
                 {
                     "a_visitor_speaks_to_you": {"name": name, "text": item.text},
@@ -283,7 +286,7 @@ class Mind:
                     "instruction": (
                         "Reply directly to the visitor, in character, 1-4 sentences. "
                         "If you have memories of them, let it show naturally. "
-                        "Return ONLY the reply text — no JSON here."
+                        "Return ONLY the reply text — plain prose, no JSON."
                     ),
                 },
                 ensure_ascii=False,
@@ -294,6 +297,12 @@ class Mind:
         if not text:
             return ""
         text = text.strip()
+        if text.startswith("{"):  # a model that answered in plan-JSON anyway
+            parsed = _extract_json(text) or {}
+            replies = parsed.get("replies") or [{}]
+            text = str(replies[0].get("text") or parsed.get("thought") or "").strip()
+            if not text:
+                return ""
         await self.engine.call(
             "remember",
             {
