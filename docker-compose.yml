@@ -1,0 +1,29 @@
+# THE deployment (SPEC §4): engine + Postgres on your own machine, $0.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: interval
+      POSTGRES_PASSWORD: interval
+      POSTGRES_DB: interval
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interval"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  engine:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://interval:interval@db:5432/interval
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

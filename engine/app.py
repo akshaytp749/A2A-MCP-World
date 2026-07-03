@@ -59,6 +59,16 @@ def _register_routes(app: FastAPI) -> None:
         # The plaintext token is returned exactly once and never stored or logged.
         return {"id": body.id, "token": token}
 
+    @app.post("/admin/agents/{agent_id}/token", dependencies=[Depends(require_admin)])
+    def rotate_token(agent_id: str) -> dict:
+        with session_scope() as session:
+            agent = session.get(Agent, agent_id)
+            if agent is None:
+                raise HTTPException(status_code=404, detail=f"no agent '{agent_id}'")
+            token = new_token()
+            agent.token_hash = hash_token(token)
+        return {"id": agent_id, "token": token}
+
     @app.post("/admin/tick", dependencies=[Depends(require_admin)])
     def advance_tick() -> dict:
         with session_scope() as session:

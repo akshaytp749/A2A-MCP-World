@@ -35,15 +35,15 @@ def test_admin_requires_token(client):
 
 
 def test_admin_create_agent_and_tick(client):
-    res = client.post("/admin/agents", headers=ADMIN,
-                      json={"id": "keeper", "name": "The Keeper", "coins": 0})
+    res = client.post(
+        "/admin/agents", headers=ADMIN, json={"id": "keeper", "name": "The Keeper", "coins": 0}
+    )
     assert res.status_code == 200
     body = res.json()
     assert body["id"] == "keeper" and len(body["token"]) > 20
 
     # duplicate rejected
-    res = client.post("/admin/agents", headers=ADMIN,
-                      json={"id": "keeper", "name": "The Keeper"})
+    res = client.post("/admin/agents", headers=ADMIN, json={"id": "keeper", "name": "The Keeper"})
     assert res.status_code == 409
 
     t0 = client.get("/health").json()["tick"]

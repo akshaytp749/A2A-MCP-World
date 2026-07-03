@@ -54,8 +54,9 @@ def build_mcp() -> FastMCP:
         return _call(ctx, "emote", {"text": text})
 
     @mcp.tool(description="Give an item you hold, or coins, to a present agent.")
-    def give(target: str, item_id: int | None = None, coins: int | None = None,
-             ctx: Context = None) -> dict:
+    def give(
+        target: str, item_id: int | None = None, coins: int | None = None, ctx: Context = None
+    ) -> dict:
         args: dict[str, Any] = {"target": target}
         if item_id is not None:
             args["item_id"] = item_id

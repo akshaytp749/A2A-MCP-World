@@ -158,7 +158,7 @@ def _log(
 # ------------------------------------------------------------------ read tools
 
 
-def _look(session: Session, world: World, view: WorldView) -> dict:
+def _look(session: Session, world: World, view: WorldView, actor_id: str) -> dict:
     occupants = [
         {"id": a.id, "name": a.name}
         for a in session.scalars(select(Agent).where(Agent.status == "active"))
@@ -166,6 +166,11 @@ def _look(session: Session, world: World, view: WorldView) -> dict:
     items = [
         {"id": i.id, "name": i.name, "price": i.price}
         for i in session.scalars(select(Item).where(Item.holder_agent_id.is_(None)))
+    ]
+    me = view.agents[actor_id]
+    my_items = [
+        {"id": i.id, "name": i.name}
+        for i in session.scalars(select(Item).where(Item.holder_agent_id == actor_id))
     ]
     return {
         "ok": True,
@@ -175,6 +180,7 @@ def _look(session: Session, world: World, view: WorldView) -> dict:
         "weather": world.weather,
         "occupants": occupants,
         "items": items,
+        "you": {"id": actor_id, "coins": me.coins, "items": my_items},
         "tick": world.tick,
     }
 
@@ -250,7 +256,7 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
             return Err(Code.NO_SUCH_AGENT, f"no agent '{actor_id}'").to_dict()
         match tool:
             case "look":
-                return _look(session, world, view)
+                return _look(session, world, view, actor_id)
             case "who":
                 return _who(session)
             case "recall_events":
