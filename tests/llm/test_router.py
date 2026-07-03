@@ -112,7 +112,7 @@ def test_quota_warn_hook_fires_once_at_80_percent(fake):
 
 def test_usage_snapshot_reports_counts(fake):
     router = make_router(fake, daily_quota=50)
-    for i in range(4):
+    for _ in range(4):
         router.generate(tier="cheap", agent_id="a", tick=1, prompt="hi")
     usage = router.usage()
     assert usage["used_today"] == 4
