@@ -7,6 +7,7 @@ All state changes flow through engine.handlers.execute inside one transaction.
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from engine.auth import resolve_actor
 from engine.db import session_scope
@@ -31,6 +32,9 @@ def build_mcp() -> FastMCP:
         instructions="The Interval world engine. All actions happen in one café room.",
         stateless_http=True,
         streamable_http_path="/",
+        # Every call is bearer-token authenticated; Host-header pinning would
+        # only break legitimate docker-network/tunnel hostnames (421s).
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 
     @mcp.tool(description="Look around the café: description, occupants, visible items.")

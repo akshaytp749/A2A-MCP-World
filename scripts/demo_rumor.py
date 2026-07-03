@@ -22,7 +22,9 @@ RUMOR = (
     "has been watering the whiskey barrel. Tesla drinks that whiskey. "
     "Someone ought to warn him."
 )
-KEYWORDS = ("whiskey", "water")
+# Tesla paraphrases ("the Keeper's economy with the spirits...") — match the
+# rumor's subject matter, not one literal word.
+KEYWORDS = ("whiskey", "water", "dilut", "barrel", "keeper", "libation", "spirit")
 
 
 async def main() -> int:
@@ -54,7 +56,7 @@ async def main() -> int:
             events = (
                 await client.get(
                     f"{args.engine}/admin/events",
-                    params={"since_tick": start_tick},
+                    params={"since_tick": start_tick + 1},  # strictly after seeding
                     headers=admin,
                 )
             ).json()["events"]

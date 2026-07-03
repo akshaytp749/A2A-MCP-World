@@ -51,7 +51,15 @@ Rules: at most 3 actions, 2 replies, 3 new_memories. Arguments:
 say{text} whisper{target,text} emote{text} give{target, item_id|coins}
 pick_up{item_id} drop{item_id} trade_offer{target,offer:{coins,items},ask:{coins,items}}
 trade_respond{trade_id,accept}. Targets are agent ids. Empty lists are fine —
-silence is in character too."""
+silence is in character too.
+
+Priorities each turn, in order:
+1. Answer messages_to_answer. If the news concerns another patron, TELL THEM
+   (a reply over A2A, or a whisper) — don't sit on it.
+2. React to the newest concrete thing said in the room: address its specific
+   detail (name the object, the claim, the number) before anything else.
+3. Only then pursue your own goals. Do not repeat a topic you have already
+   made your point on this conversation — move the scene forward."""
 
 
 def build_system_prompt(config: NpcConfig) -> str:

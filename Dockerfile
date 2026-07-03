@@ -3,6 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY pyproject.toml ./
 COPY engine ./engine
+COPY llm ./llm
 COPY npc ./npc
 COPY gateway ./gateway
 COPY gate ./gate
