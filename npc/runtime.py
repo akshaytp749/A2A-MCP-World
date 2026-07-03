@@ -78,11 +78,14 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        token, created = _register_with_engine(engine_url, admin_token, config)
+        token, _created = _register_with_engine(engine_url, admin_token, config)
         engine = McpEngineClient(engine_url, token)
         app.state.engine = engine
         app.state.mind = Mind(config, engine, peers)
-        if created:
+        # Seed biographical memories iff the agent has none yet — idempotent
+        # even if an earlier boot died between registration and seeding.
+        existing = await engine.call("recall", {"query": "", "k": 1})
+        if not existing.get("memories"):
             app.state.seeded = await _write_seed_memories(engine, config)
         yield
 
