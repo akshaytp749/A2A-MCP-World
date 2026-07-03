@@ -39,7 +39,12 @@ under enforced rules.
    (Langfuse + event log). "Why did Tesla start a feud with Darwin?" must be answerable.
 
 ### Non-goals (out of scope for v1)
-- No graphics/game engine. Text + minimal web UI only.
+- No external game engine/framework (Phaser, Unity, …) and no gameplay
+  mechanics (physics, collision, player movement). The UI is a **retro pixel
+  scene**: a hand-rolled ~zero-dependency canvas renderer draws the café,
+  sprites for each resident, and speech bubbles from the live event feed.
+  Sprite positions are client-side flavor — NOT world state (the engine has
+  no coordinates; G1 unaffected). v1.1 amendment; was "text + minimal UI".
 - **No multi-room map.** The world is a single room (the café). No movement
   system, no exits, no `move` tool. Courtyard/alcove exist only as flavor in
   the room description. A room graph is a v2 idea, not a v1 gap.
@@ -122,8 +127,9 @@ under enforced rules.
   free-tier request quota and auto-sets `WORLD_PAUSED=1` at 80% consumption.
 
 ### FR-5 Human interface
-- FR-5.1 Web chat: pick a display name → enter the café → see room
-  description + occupants → talk to any NPC → responses stream.
+- FR-5.1 Web chat: pick a display name → enter the café → see the pixel café
+  scene with the residents visibly present as sprites (speech bubbles for
+  says/emotes from the live feed) → click/select any NPC and talk to them.
 - FR-5.2 Human messages to an NPC are delivered over the same A2A path
   (the gateway acts as the visitor's agent). **Visitor-initiated messages are
   answered inline (streamed), never deferred to the next tick** — the FR-3.3

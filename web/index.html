@@ -5,69 +5,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Interval</title>
 <style>
-  :root { --bg:#14100d; --panel:#1e1813; --ink:#e8ddcb; --dim:#9b8c74; --accent:#c9a35c; }
+  :root { --bg:#0d0a08; --panel:#1a140e; --ink:#e8ddcb; --dim:#9b8c74; --accent:#f0b95a; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--ink); font:15px/1.5 Georgia, 'Times New Roman', serif;
-         min-height:100vh; display:flex; flex-direction:column; }
-  header { padding:14px 20px; border-bottom:1px solid #33291e; display:flex; gap:14px;
-           align-items:baseline; flex-wrap:wrap; }
-  header h1 { font-size:22px; color:var(--accent); font-weight:normal; letter-spacing:1px; }
-  header .meta { color:var(--dim); font-size:13px; }
-  main { flex:1; display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; padding:14px 20px;
-         max-width:1200px; width:100%; margin:0 auto; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  .panel { background:var(--panel); border:1px solid #33291e; border-radius:8px; padding:14px;
-           display:flex; flex-direction:column; min-height:0; }
-  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:2px; color:var(--dim);
-              margin-bottom:8px; }
-  #description { font-style:italic; color:var(--dim); margin-bottom:10px; font-size:14px; }
-  #occupants { margin-bottom:10px; font-size:14px; }
-  #occupants span { display:inline-block; background:#2a2118; border-radius:12px;
-                    padding:2px 10px; margin:2px; }
-  #feed { flex:1; overflow-y:auto; max-height:52vh; font-size:14px; }
-  #feed div { padding:4px 0; border-bottom:1px dotted #2a2118; }
+  body { background:var(--bg); color:var(--ink);
+         font: 13px/1.6 'Courier New', monospace; min-height:100vh;
+         display:flex; flex-direction:column; }
+  .pixel { font-weight:bold; letter-spacing:2px; text-transform:uppercase;
+           text-shadow: 2px 2px 0 #000; }
+  header { padding:10px 16px; display:flex; gap:16px; align-items:baseline; flex-wrap:wrap;
+           border-bottom:3px solid #33291e; }
+  header h1 { font-size:20px; color:var(--accent); }
+  header .meta { color:var(--dim); font-size:12px; }
+  main { flex:1; display:grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+         gap:12px; padding:12px 16px; max-width:1280px; width:100%; margin:0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  #stage { position:relative; width:100%; }
+  canvas { width:100%; display:block; image-rendering: pixelated; image-rendering: crisp-edges;
+           border:3px solid #33291e; border-radius:4px; background:#000; cursor:pointer; }
+  #banner { position:absolute; top:8px; left:50%; transform:translateX(-50%);
+            background:#000c; color:var(--accent); padding:4px 12px; font-size:12px;
+            border:2px solid var(--accent); display:none; max-width:90%; }
+  #feed { margin-top:8px; max-height:20vh; overflow-y:auto; font-size:12px; color:var(--dim);
+          background:var(--panel); border:2px solid #33291e; border-radius:4px; padding:8px; }
   #feed .actor { color:var(--accent); }
-  #feed .tool { color:var(--dim); font-size:12px; }
-  #chatlog { flex:1; overflow-y:auto; max-height:44vh; margin-bottom:10px; font-size:14px; }
-  #chatlog .me { color:#8fb573; }
-  #chatlog .npc { color:var(--ink); }
+  .panel { background:var(--panel); border:3px solid #33291e; border-radius:4px; padding:12px;
+           display:flex; flex-direction:column; }
+  .panel h2 { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  #target { color: var(--accent); }
+  #chatlog { flex:1; overflow-y:auto; min-height:30vh; max-height:46vh; margin-bottom:8px;
+             font-size:13px; }
   #chatlog div { margin:6px 0; }
-  input, select, button, textarea { background:#241c14; color:var(--ink); border:1px solid #3d2f20;
-      border-radius:6px; padding:8px; font:inherit; }
+  #chatlog .me { color:#8fb573; }
+  input, select, button { background:#241c14; color:var(--ink); border:2px solid #3d2f20;
+      border-radius:4px; padding:8px; font:inherit; }
   button { cursor:pointer; background:#3d2f20; } button:hover { background:#4d3b28; }
-  .row { display:flex; gap:8px; margin-top:6px; }
-  .row input[type=text] { flex:1; }
-  footer { padding:10px 20px; color:var(--dim); font-size:12px; border-top:1px solid #33291e;
+  .row { display:flex; gap:6px; margin-top:6px; }
+  .row input[type=text] { flex:1; min-width:0; }
+  footer { padding:8px 16px; color:var(--dim); font-size:11px; border-top:3px solid #33291e;
            text-align:center; }
-  details { margin-top:10px; color:var(--dim); font-size:13px; }
-  details .row { flex-wrap:wrap; }
-  #opstatus { margin-top:6px; font-size:12px; min-height:16px; }
+  details { margin-top:10px; color:var(--dim); font-size:12px; }
+  #opstatus { margin-top:4px; font-size:11px; min-height:14px; }
   .paused { color:#c96b5c; }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="cafe">The Interval</h1>
-  <span class="meta" id="worldmeta">…</span>
+  <h1 class="pixel" id="cafe">THE INTERVAL</h1>
+  <span class="meta pixel" id="worldmeta">…</span>
 </header>
 <main>
-  <section class="panel">
-    <h2>The Room</h2>
-    <div id="description"></div>
-    <div id="occupants"></div>
-    <h2>Happenings</h2>
+  <section id="left">
+    <div id="stage">
+      <canvas id="game" width="384" height="216"></canvas>
+      <div id="banner" class="pixel"></div>
+    </div>
     <div id="feed"></div>
   </section>
   <section class="panel">
-    <h2>Talk</h2>
-    <div class="row">
-      <input type="text" id="name" placeholder="Your name">
-      <select id="npc"></select>
-    </div>
+    <h2 class="pixel">Talking to <span id="target">nobody — click a patron</span></h2>
+    <div class="row"><input type="text" id="name" placeholder="Your name"></div>
     <div id="chatlog"></div>
     <div class="row">
       <input type="text" id="msg" placeholder="Say something…">
-      <button id="send">Send</button>
+      <button id="send" class="pixel">Send</button>
     </div>
     <details>
       <summary>Operator</summary>
@@ -87,32 +87,335 @@
 <footer>
   Fictional AI portrayals of historical figures — not affiliated with their estates.
 </footer>
+
 <script>
+"use strict";
 const $ = id => document.getElementById(id);
 $('name').value = localStorage.getItem('interval-name') || '';
 
+/* ---------------------------------------------------------- pixel sprites
+   12x16 grids; each char is a palette key, '.' = transparent. Hand-drawn —
+   no game engine, no asset pipeline, no cost. */
+const PAL = {
+  k:'#1b1410', s:'#e8b98a', S:'#c98d5a',           // outline, skin, skin shade
+  w:'#f2ede3', g:'#b9b2a4', G:'#7d7668',           // white suit, grey, dark grey
+  b:'#23201f', B:'#3a3733',                        // black suit
+  t:'#d9cdb2', T:'#b3a688',                        // toga
+  v:'#4a3524', V:'#2f2318',                        // victorian browns
+  c:'#f5f0e0', d:'#6b5233', o:'#e77'  ,            // cream, dhoti-brown, accent red
+  u:'#5878a8', U:'#3c5578',                        // visitor blues
+  y:'#f0b95a', z:'#88e0ff'                         // gold, spark blue
+};
+const SPRITES = {
+twain: `
+....gggg....
+...gggggg...
+...ksskss...
+...ssssss...
+...sgggggs..
+....gggg....
+..wwwwwwww..
+.wwkwwwwkww.
+.wwwwwwwwww.
+.wwwwwwwwww.
+..wwwwwww...
+..ww..ww....
+..ww..ww....
+..GG..GG....
+..kk..kk....
+............`,
+tesla: `
+....bbbb....
+...bbbbbb...
+...ksskss...
+...ssssss...
+...sbbbbs...
+..z.bbbb.z..
+..bbbbbbbb..
+.bbkwwwwkbb.
+.bbwbbbbwbb.
+.bbbbbbbbbb.
+..bbbbbbb...
+..bb..bb....
+..bb..bb....
+..BB..BB....
+..kk..kk....
+............`,
+socrates: `
+....ssss....
+...ssssss...
+...ksskss...
+...ssssss...
+...gssssg...
+...gggggg...
+..tttttttt..
+.tttkttkttt.
+.ttttttttt..
+.sttttttts..
+..ttttttt...
+..tt..tt....
+..ss..ss....
+..ss..ss....
+............
+............`,
+darwin: `
+....gggg....
+...sgggs....
+...ksskss...
+...ssssss...
+...gggggg...
+...gggggg...
+..vvggggvv..
+.vvvggggvvv.
+.vvvvvvvvvv.
+.vvvvvvvvvv.
+..vvvvvvv...
+..vv..vv....
+..vv..vv....
+..VV..VV....
+..kk..kk....
+............`,
+ramanujan: `
+....bbbb....
+...bbbbbb...
+...ksskss...
+...SSSSSS...
+...SSSSSS...
+....cccc....
+..cccccccc..
+.cckcccckcc.
+.cccccccccy.
+.cccccccccy.
+..ddddddd...
+..dd..dd....
+..SS..SS....
+..SS..SS....
+............
+............`,
+visitor: `
+....uuuu....
+...uuuuuu...
+...ksskss...
+...ssssss...
+...ssssss...
+....uuuu....
+..uuuuuuuu..
+.uukuuuukuu.
+.uuuuuuuuuu.
+.uuuuuuuuuu.
+..uuuuuuu...
+..uu..uu....
+..uu..uu....
+..UU..UU....
+..kk..kk....
+............`};
+
+function drawSprite(ctx, key, x, y, scale=1) {
+  const rows = SPRITES[key].trim().split('\n');
+  for (let r = 0; r < rows.length; r++)
+    for (let c = 0; c < rows[r].length; c++) {
+      const ch = rows[r][c];
+      if (ch !== '.' && PAL[ch]) {
+        ctx.fillStyle = PAL[ch];
+        ctx.fillRect(x + c*scale, y + r*scale, scale, scale);
+      }
+    }
+}
+
+/* ---------------------------------------------------------- the room */
+const cv = $('game'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+
+function paintRoom() {
+  const b = bg.getContext('2d');
+  // floor planks
+  for (let y = 64; y < H; y += 12) {
+    b.fillStyle = (y/12) % 2 ? '#3a2a1a' : '#332517';
+    b.fillRect(0, y, W, 12);
+    b.fillStyle = '#2a1e12';
+    for (let x = ((y/12)%2)*24; x < W; x += 48) b.fillRect(x, y, 2, 12);
+  }
+  // back wall
+  b.fillStyle = '#241a10'; b.fillRect(0, 0, W, 64);
+  b.fillStyle = '#1b1309'; b.fillRect(0, 60, W, 4);
+  // chalkboard with equations
+  b.fillStyle = '#12241c'; b.fillRect(12, 8, 100, 44);
+  b.strokeStyle = '#5a4630'; b.lineWidth = 3; b.strokeRect(12, 8, 100, 44);
+  b.fillStyle = '#9fd0b5'; b.font = '7px monospace';
+  ['∂ψ=iħ…  e^iπ+1=0', '1+1/1!+1/2!+…=e', 'f(x)≈Σ aₙxⁿ  ∇×B', 'π(x)~x/ln x   ∞'].forEach(
+    (t, i) => b.fillText(t, 17, 19 + i*10));
+  // bar counter
+  b.fillStyle = '#5a3d22'; b.fillRect(128, 34, 176, 22);
+  b.fillStyle = '#6e4c2c'; b.fillRect(128, 34, 176, 5);
+  b.fillStyle = '#3d2914'; b.fillRect(128, 56, 176, 4);
+  // bottles on shelf
+  b.fillStyle = '#241a10'; b.fillRect(140, 6, 150, 20);
+  const bottleCols = ['#7b3f2a','#3f6b4a','#8a6f2e','#5878a8','#7b3f2a','#8a6f2e'];
+  bottleCols.forEach((ccol, i) => { b.fillStyle = ccol; b.fillRect(146 + i*24, 10, 7, 16); });
+  // gas lamps
+  [70, 200, 330].forEach(x => {
+    b.fillStyle = '#2a2118'; b.fillRect(x-1, 0, 2, 10);
+    b.fillStyle = '#f0b95a'; b.fillRect(x-4, 10, 8, 8);
+    b.fillStyle = '#fff3c9'; b.fillRect(x-2, 12, 4, 4);
+  });
+  // courtyard door (right) with stars
+  b.fillStyle = '#080d1a'; b.fillRect(318, 6, 58, 50);
+  b.strokeStyle = '#5a4630'; b.strokeRect(318, 6, 58, 50);
+  b.fillStyle = '#e8ddcb';
+  [[326,14],[340,10],[355,20],[365,12],[333,30],[350,38],[368,32],[344,24]].forEach(
+    ([x,y]) => b.fillRect(x, y, 2, 2));
+  b.fillStyle = '#88e0ff'; b.fillRect(358, 44, 3, 3); // the sundial glints
+  // tables
+  [[60, 120], [180, 150], [300, 120]].forEach(([x, y]) => {
+    b.fillStyle = '#2a1e12'; b.fillRect(x+4, y+16, 6, 14); b.fillRect(x+26, y+16, 6, 14);
+    b.fillStyle = '#5a3d22'; b.fillRect(x, y, 36, 18);
+    b.fillStyle = '#6e4c2c'; b.fillRect(x, y, 36, 4);
+  });
+  // rug
+  b.fillStyle = '#4a2a2a'; b.fillRect(140, 96, 100, 40);
+  b.strokeStyle = '#6e4444'; b.strokeRect(144, 100, 92, 32);
+}
+paintRoom();
+
+/* ---------------------------------------------------- actors + animation */
+const SPOTS = [[40,86],[96,140],[150,100],[210,170],[250,96],[320,150],[280,170],
+               [70,170],[160,140],[330,90]];
+const actors = new Map();  // id -> actor
+
+function addActor(id, name, spriteKey) {
+  if (actors.has(id)) return;
+  const [x, y] = SPOTS[actors.size % SPOTS.length];
+  actors.set(id, { id, name, spriteKey, x, y, tx: x, ty: y,
+                   bubble: null, bubbleUntil: 0, phase: Math.random()*6 });
+}
+
+function wander(a, now) {
+  if (a.id === selected) return;                       // your interlocutor stays put
+  if (!a.nextMove || now > a.nextMove) {
+    const [sx, sy] = SPOTS[Math.floor(Math.random()*SPOTS.length)];
+    a.tx = sx; a.ty = sy;
+    a.nextMove = now + 5000 + Math.random()*9000;
+  }
+  const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+  if (d > 1) { a.x += dx/d * 0.35; a.y += dy/d * 0.35; }
+}
+
+function say(id, text, emote=false) {
+  const a = actors.get(id);
+  if (!a) return;
+  a.bubble = (emote ? '* ' : '') + text.slice(0, 120) + (text.length > 120 ? '…' : '');
+  a.bubbleUntil = performance.now() + Math.min(12000, 3500 + text.length * 40);
+}
+
+function drawBubble(a) {
+  ctx.font = '8px monospace';
+  const words = a.bubble.split(' '); const lines = ['']; const maxW = 130;
+  for (const w of words) {
+    const t = lines[lines.length-1] + (lines[lines.length-1] ? ' ' : '') + w;
+    if (ctx.measureText(t).width > maxW) lines.push(w); else lines[lines.length-1] = t;
+  }
+  const bw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 10;
+  const bh = lines.length * 9 + 8;
+  let bx = Math.min(Math.max(4, a.x + 6 - bw/2), W - bw - 4);
+  let by = Math.max(4, a.y - bh - 6);
+  ctx.fillStyle = '#f5f0e0'; ctx.strokeStyle = '#1b1410'; ctx.lineWidth = 2;
+  ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = '#f5f0e0';
+  ctx.fillRect(a.x + 3, by + bh - 1, 6, 5);   // tail
+  ctx.fillStyle = '#1b1410';
+  lines.forEach((l, i) => ctx.fillText(l, bx + 5, by + 12 + i*9));
+}
+
+let selected = null;
+let clockTint = 'evening';
+const TINTS = { morning:'rgba(255,230,170,0.06)', midday:'rgba(255,255,255,0)',
+                afternoon:'rgba(255,200,120,0.05)', evening:'rgba(60,30,60,0.14)',
+                night:'rgba(10,15,50,0.24)', 'small hours':'rgba(5,8,40,0.30)' };
+
+function frame(now) {
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(bg, 0, 0);
+  const list = [...actors.values()].sort((p, q) => p.y - q.y);
+  for (const a of list) {
+    wander(a, now);
+    const bob = Math.round(Math.sin(now/280 + a.phase) * 1.5);
+    if (a.id === selected) {                       // selection ring
+      ctx.strokeStyle = '#f0b95a'; ctx.lineWidth = 1;
+      ctx.strokeRect(a.x - 2, a.y + bob - 2, 16, 20);
+    }
+    drawSprite(ctx, a.spriteKey, a.x, a.y + bob, 1);
+    ctx.font = '7px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#000a'; ctx.fillRect(a.x + 6 - 22, a.y + 17, 44, 9);
+    ctx.fillStyle = a.id === selected ? '#f0b95a' : '#e8ddcb';
+    ctx.fillText(a.name.toUpperCase(), a.x + 6, a.y + 24);
+    ctx.textAlign = 'left';
+  }
+  for (const a of list)
+    if (a.bubble && now < a.bubbleUntil) drawBubble(a); else a.bubble = a.bubble && null;
+  ctx.fillStyle = TINTS[clockTint] ?? TINTS.evening;
+  ctx.fillRect(0, 0, W, H);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+cv.addEventListener('click', ev => {
+  const r = cv.getBoundingClientRect();
+  const mx = (ev.clientX - r.left) * W / r.width, my = (ev.clientY - r.top) * H / r.height;
+  let best = null, bestD = 24;
+  for (const a of actors.values()) {
+    if (a.spriteKey === 'visitor') continue;
+    const d = Math.hypot(a.x + 6 - mx, a.y + 8 - my);
+    if (d < bestD) { best = a; bestD = d; }
+  }
+  if (best) {
+    selected = best.id;
+    $('target').textContent = best.name;
+    $('msg').focus();
+  }
+});
+
+/* ---------------------------------------------------------- world state */
 async function loadRoom() {
   const r = await (await fetch('/gateway/room')).json();
-  $('cafe').textContent = r.cafe;
-  $('worldmeta').innerHTML = `tick ${r.tick} · ${r.clock_time} · ${r.weather}` +
+  $('cafe').textContent = r.cafe.toUpperCase();
+  clockTint = r.clock_time;
+  $('worldmeta').innerHTML = `TICK ${r.tick} · ${r.clock_time} · ${r.weather}` +
     (r.paused ? ' · <span class="paused">PAUSED</span>' : '');
-  $('description').textContent = r.description;
-  $('occupants').innerHTML = r.occupants.map(o => `<span>${o.name}</span>`).join('');
-  const opts = r.occupants.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-  if ($('npc').innerHTML !== opts) { $('npc').innerHTML = opts; $('ejectsel').innerHTML = opts; }
+  const ids = new Set();
+  for (const o of r.occupants) {
+    ids.add(o.id);
+    addActor(o.id, o.name.split(' ').pop(), SPRITES[o.id] ? o.id : 'visitor');
+  }
+  for (const id of [...actors.keys()])
+    if (!ids.has(id) && actors.get(id).spriteKey !== 'visitor') actors.delete(id);
+  $('ejectsel').innerHTML = r.occupants.map(o =>
+    `<option value="${o.id}">${o.name}</option>`).join('');
 }
 loadRoom(); setInterval(loadRoom, 15000);
 
+/* ------------------------------------------------------------- SSE feed */
 const es = new EventSource('/gateway/events');
 es.onmessage = ev => {
   const e = JSON.parse(ev.data);
+  if (e.tool === 'say') say(e.actor, e.text);
+  if (e.tool === 'emote') say(e.actor, e.text, true);
+  if (e.tool === 'event_seed') banner(e.text);
+  if (e.tool === 'eject') actors.delete(e.actor);
   const div = document.createElement('div');
-  div.innerHTML = `<span class="actor">${e.actor}</span> ` +
-                  `<span class="tool">${e.tool}</span> ${e.text || ''}`;
+  div.innerHTML = `<span class="actor">${e.actor}</span> <em>${e.tool}</em> ${e.text || ''}`;
   $('feed').prepend(div);
-  while ($('feed').children.length > 80) $('feed').lastChild.remove();
+  while ($('feed').children.length > 60) $('feed').lastChild.remove();
 };
 
+let bannerTimer = null;
+function banner(text) {
+  $('banner').textContent = text; $('banner').style.display = 'block';
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => $('banner').style.display = 'none', 12000);
+}
+
+/* ----------------------------------------------------------------- chat */
 function log(cls, who, text) {
   const div = document.createElement('div');
   div.className = cls;
@@ -122,25 +425,31 @@ function log(cls, who, text) {
 }
 
 async function send() {
-  const name = $('name').value.trim(), text = $('msg').value.trim(), target = $('npc').value;
-  if (!name || !text || !target) return;
+  const name = $('name').value.trim(), text = $('msg').value.trim();
+  if (!name || !text) return;
+  if (!selected) { log('me', 'system', 'click a patron in the café first'); return; }
   localStorage.setItem('interval-name', name);
+  addActor('you', name, 'visitor');
+  say('you', text);
   log('me', name, text);
   $('msg').value = ''; $('send').disabled = true;
   try {
     const res = await fetch('/gateway/chat', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({display_name: name, target, text}),
+      body: JSON.stringify({display_name: name, target: selected, text}),
     });
     const data = await res.json();
-    log('npc', $('npc').selectedOptions[0].textContent,
-        res.ok ? data.reply : (data.detail || 'something went wrong'));
+    const npcName = actors.get(selected)?.name || selected;
+    const reply = res.ok ? data.reply : (data.detail || 'something went wrong');
+    say(selected, reply);
+    log('npc', npcName, reply);
   } catch (e) { log('npc', 'system', 'the café did not answer: ' + e); }
   $('send').disabled = false;
 }
 $('send').onclick = send;
 $('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
+/* ------------------------------------------------------------- operator */
 async function op(kind, arg) {
   const token = $('admintoken').value.trim();
   if (!token) { $('opstatus').textContent = 'admin token required'; return; }
