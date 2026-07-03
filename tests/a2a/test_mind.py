@@ -169,3 +169,15 @@ async def test_failed_action_gets_one_corrective_retry():
     await mind.run_tick(1, [])
     assert model.n_calls == 2  # decide + retry
     assert ("give", {"target": "tesla", "coins": 1}) in engine.acting_calls()
+
+
+async def test_llm_outage_makes_quiet_turn_not_crash():
+    class ExplodingModel:
+        def __call__(self, *, model, system, prompt, max_tokens):
+            raise RuntimeError("429 RESOURCE_EXHAUSTED")
+
+    engine = FakeEngine()
+    mind = make_mind(engine, ExplodingModel())
+    summary = await mind.run_tick(1, [InboxItem("tesla", "hello?", 1)])
+    assert summary["actions"] == [] and summary["replied_to"] == []
+    assert engine.acting_calls() == []  # silence, not a 500

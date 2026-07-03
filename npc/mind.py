@@ -155,28 +155,33 @@ class Mind:
             ensure_ascii=False,
             default=str,
         )
-        text = self.router.generate(
-            tier=self.config.model_tier,
-            agent_id=self.config.id,
-            tick=tick,
-            system=self.system_prompt,
-            prompt=prompt,
-            max_tokens=700,
-            name="decide",
+        text = self._generate_or_none(
+            tick, system=self.system_prompt, prompt=prompt, max_tokens=700, name="decide"
         )
-        plan = _extract_json(text)
-        if plan is None:  # one repair call, then give up quietly (FR-2.3 budget)
-            text = self.router.generate(
-                tier=self.config.model_tier,
-                agent_id=self.config.id,
-                tick=tick,
+        plan = _extract_json(text) if text is not None else None
+        if plan is None and text is not None:
+            # one repair call, then give up quietly (FR-2.3 budget)
+            text = self._generate_or_none(
+                tick,
                 system="Return ONLY the corrected JSON object. No prose.",
                 prompt=f"This was not valid JSON for the required plan schema:\n{text}",
                 max_tokens=700,
                 name="repair",
             )
-            plan = _extract_json(text)
+            plan = _extract_json(text) if text is not None else None
         return plan or {"thought": "", "actions": [], "replies": [], "new_memories": []}
+
+    def _generate_or_none(self, tick: int, **kw) -> str | None:
+        """A quota hiccup or provider outage makes a quiet turn, not a crash.
+
+        Budget violations included: an NPC over its ceiling sits this one out.
+        """
+        try:
+            return self.router.generate(
+                tier=self.config.model_tier, agent_id=self.config.id, tick=tick, **kw
+            )
+        except Exception:
+            return None
 
     # ----------------------------------------------------------------------- act
 
@@ -192,16 +197,14 @@ class Mind:
             res = await self.engine.call(tool, args)
             if not res.get("ok") and not retried:
                 retried = True  # ≤1 corrective retry per tick (ARCH §2.2)
-                fix_text = self.router.generate(
-                    tier=self.config.model_tier,
-                    agent_id=self.config.id,
-                    tick=tick,
+                fix_text = self._generate_or_none(
+                    tick,
                     system="Fix the failed tool call. " + PLAN_SCHEMA,
                     prompt=json.dumps({"failed_action": action, "error": res}),
                     max_tokens=200,
                     name="retry",
                 )
-                fixed = _extract_json(fix_text) or {}
+                fixed = (_extract_json(fix_text) if fix_text is not None else None) or {}
                 fixed_actions = fixed.get("actions") or []
                 if fixed_actions:
                     fa = fixed_actions[0]

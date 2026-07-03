@@ -13,7 +13,10 @@ from datetime import date
 
 TIER_MODELS = {
     "cheap": "gemini-2.5-flash-lite",  # background NPC decide, compaction, filters
-    "mid": "gemini-2.5-flash",  # focal NPC decide, coherence judge
+    # Measured 2026-07: free tier caps gemini-2.5-flash at 20 requests/DAY per
+    # model — unusable for ticking NPCs. Flash-Lite's free quota is far larger,
+    # so both tiers ride it for now; revisit after M3 coherence evals (FR-2.5).
+    "mid": "gemini-2.5-flash-lite",
 }
 TICK_CEILING = 6  # FR-2.3: max LLM calls per NPC per tick
 DAILY_QUOTA_DEFAULT = 1000  # pinned here, not in docs (ARCHITECTURE §7)
