@@ -10,6 +10,7 @@ become facts (G1).
 """
 
 import json
+import logging
 import re
 from collections.abc import Awaitable, Callable
 from typing import Protocol
@@ -17,6 +18,8 @@ from typing import Protocol
 from llm.router import LLMRouter, get_router
 from npc.a2a_server import InboxItem
 from npc.config import NpcConfig
+
+logger = logging.getLogger("npc.mind")
 
 MAX_ACTIONS = 3  # FR-2.3
 MAX_REPLIES = 2  # client-side politeness; engine-side pair cap is FR-3.4
@@ -180,7 +183,10 @@ class Mind:
             return self.router.generate(
                 tier=self.config.model_tier, agent_id=self.config.id, tick=tick, **kw
             )
-        except Exception:
+        except Exception as exc:
+            logger.warning("LLM %s failed for %s tick %s: %s: %s",
+                           kw.get("name", "call"), self.config.id, tick,
+                           type(exc).__name__, str(exc)[:200])
             return None
 
     # ----------------------------------------------------------------------- act

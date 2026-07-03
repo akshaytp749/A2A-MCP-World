@@ -11,12 +11,15 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 
+# Measured live 2026-07-03 on this key's free tier:
+#   gemini-2.5-flash / 2.5-flash-lite : 20 requests/DAY per model (tiny)
+#   gemini-2.0-flash / 2.0-flash-lite : limit 0 (retired from free tier)
+#   gemini-3-flash-preview / 3.1-flash-lite-preview : working free quota
+# Quota buckets are per-model, so tiers on different models don't compete.
+# Revisit after M3 coherence evals (FR-2.5); Groq fallback is the next lever.
 TIER_MODELS = {
-    "cheap": "gemini-2.5-flash-lite",  # background NPC decide, compaction, filters
-    # Measured 2026-07: free tier caps gemini-2.5-flash at 20 requests/DAY per
-    # model — unusable for ticking NPCs. Flash-Lite's free quota is far larger,
-    # so both tiers ride it for now; revisit after M3 coherence evals (FR-2.5).
-    "mid": "gemini-2.5-flash-lite",
+    "cheap": "gemini-3.1-flash-lite-preview",  # background decide, compaction, filters
+    "mid": "gemini-3-flash-preview",  # focal NPC decide, coherence judge
 }
 TICK_CEILING = 6  # FR-2.3: max LLM calls per NPC per tick
 DAILY_QUOTA_DEFAULT = 1000  # pinned here, not in docs (ARCHITECTURE §7)
