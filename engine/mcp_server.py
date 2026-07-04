@@ -57,6 +57,15 @@ def build_mcp() -> FastMCP:
     def emote(text: str, ctx: Context = None) -> dict:
         return _call(ctx, "emote", {"text": text})
 
+    @mcp.tool(
+        description=(
+            "Walk to a named place in the café: bar, chalkboard, alcove, "
+            "courtyard-door, rug, corner-table, window-table."
+        )
+    )
+    def move_to(spot: str, ctx: Context = None) -> dict:
+        return _call(ctx, "move_to", {"spot": spot})
+
     @mcp.tool(description="Give an item you hold, or coins, to a present agent.")
     def give(
         target: str, item_id: int | None = None, coins: int | None = None, ctx: Context = None

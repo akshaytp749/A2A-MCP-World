@@ -31,6 +31,7 @@ ACTING_TOOLS = {
     "say",
     "whisper",
     "emote",
+    "move_to",
     "give",
     "pick_up",
     "drop",
@@ -54,10 +55,17 @@ PLAN_SCHEMA = """Respond with ONLY a JSON object, no prose, no code fences:
   "new_memories": [{"content": "<fact worth keeping>", "salience": 0.0-1.0}]
 }
 Rules: at most 3 actions, 2 replies, 3 new_memories. Arguments:
-say{text} whisper{target,text} emote{text} give{target, item_id|coins}
-pick_up{item_id} drop{item_id} trade_offer{target,offer:{coins,items},ask:{coins,items}}
-trade_respond{trade_id,accept}. Targets are agent ids. Empty lists are fine —
-silence is in character too.
+say{text} whisper{target,text} emote{text} move_to{spot}
+give{target, item_id|coins} pick_up{item_id} drop{item_id}
+trade_offer{target,offer:{coins,items},ask:{coins,items}}
+trade_respond{trade_id,accept}. Targets are agent ids. Spots (places in the
+café): bar, chalkboard, alcove, courtyard-door, rug, corner-table,
+window-table. Empty lists are fine — silence is in character too.
+
+Your body is real: perception shows where you and everyone else are standing
+(their "spot"). If your words involve a place — walking to the slate, joining
+someone at the bar, stepping to the courtyard doors — MOVE THERE with move_to
+in the same turn. Never claim to be somewhere you are not.
 
 Priorities each turn, in order:
 1. Answer messages_to_answer. If the news concerns another patron, TELL THEM

@@ -91,7 +91,7 @@ def room() -> dict:
     with session_scope() as session:
         world = session.get(World, 1)
         occupants = [
-            {"id": a.id, "name": a.name, "kind": a.kind}
+            {"id": a.id, "name": a.name, "kind": a.kind, "spot": a.spot or "bar"}
             for a in session.scalars(
                 select(Agent).where(Agent.status == "active", Agent.kind.in_(["resident", "guest"]))
             )

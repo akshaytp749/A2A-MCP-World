@@ -23,10 +23,12 @@ from engine.rules import (
     GiveItem,
     ItemView,
     MoveItem,
+    MoveTo,
     Ok,
     OpenTrade,
     PickUp,
     Say,
+    SetSpot,
     SetTradeStatus,
     TradeOffer,
     TradeRespond,
@@ -40,6 +42,7 @@ ACTING_TOOLS = {
     "say",
     "whisper",
     "emote",
+    "move_to",
     "give",
     "pick_up",
     "drop",
@@ -54,7 +57,7 @@ def _snapshot(session: Session) -> tuple[World, WorldView]:
     if world is None:
         raise RuntimeError("world row missing — engine not seeded")
     agents = {
-        a.id: AgentView(id=a.id, status=a.status, coins=a.coins)
+        a.id: AgentView(id=a.id, status=a.status, coins=a.coins, spot=a.spot or "bar")
         for a in session.scalars(select(Agent))
     }
     items = {
@@ -111,6 +114,8 @@ def _to_action(actor_id: str, tool: str, args: dict):
             return TradeRespond(
                 actor=actor_id, trade_id=int(args["trade_id"]), accept=bool(args["accept"])
             )
+        case "move_to":
+            return MoveTo(actor=actor_id, spot=str(args["spot"]))
     return None
 
 
@@ -138,6 +143,8 @@ def _apply(session: Session, mutations) -> dict:
                 extras["trade_id"] = trade.id
             case SetTradeStatus(trade_id=trade_id, status=status):
                 session.get(Trade, trade_id).status = status
+            case SetSpot(agent_id=agent_id, spot=spot):
+                session.get(Agent, agent_id).spot = spot
     return extras
 
 
@@ -160,7 +167,7 @@ def _log(
 
 def _look(session: Session, world: World, view: WorldView, actor_id: str) -> dict:
     occupants = [
-        {"id": a.id, "name": a.name}
+        {"id": a.id, "name": a.name, "spot": a.spot or "bar"}
         for a in session.scalars(select(Agent).where(Agent.status == "active"))
     ]
     items = [

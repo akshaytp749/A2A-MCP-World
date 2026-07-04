@@ -47,6 +47,8 @@ class Agent(Base):
     )
     coins: Mapped[int] = mapped_column(Integer, default=0)
     strikes: Mapped[int] = mapped_column(Integer, default=0)
+    # Named place inside the single café room (engine/rules.py CAFE_SPOTS).
+    spot: Mapped[str] = mapped_column(String(32), default="bar", server_default="bar")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

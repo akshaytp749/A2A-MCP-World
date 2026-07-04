@@ -12,11 +12,27 @@ from engine.errors import Code, Err
 # ------------------------------------------------------------------ state views
 
 
+# Named places inside the single café room (NOT a room graph — one room,
+# SPEC §1). An agent's spot is world state: minds choose it via move_to,
+# the UI renders it, dialogue can reference it honestly.
+CAFE_SPOTS = {
+    "bar": "at the long bar",
+    "chalkboard": "by the chalkboard wall",
+    "alcove": "in the quiet alcove",
+    "courtyard-door": "by the open courtyard doors",
+    "rug": "on the hearth rug",
+    "corner-table": "at the corner table",
+    "window-table": "at the table near the courtyard",
+}
+DEFAULT_SPOT = "bar"
+
+
 @dataclass(frozen=True)
 class AgentView:
     id: str
     status: str = "active"
     coins: int = 0
+    spot: str = DEFAULT_SPOT
 
 
 @dataclass(frozen=True)
@@ -109,7 +125,24 @@ class TradeRespond:
     accept: bool
 
 
-Action = Say | Whisper | Emote | GiveItem | GiveCoins | PickUp | Drop | TradeOffer | TradeRespond
+@dataclass(frozen=True)
+class MoveTo:
+    actor: str
+    spot: str
+
+
+Action = (
+    Say
+    | Whisper
+    | Emote
+    | GiveItem
+    | GiveCoins
+    | PickUp
+    | Drop
+    | TradeOffer
+    | TradeRespond
+    | MoveTo
+)
 
 # ------------------------------------------------------------------- mutations
 
@@ -140,7 +173,13 @@ class SetTradeStatus:
     status: str
 
 
-Mutation = MoveItem | AdjustCoins | OpenTrade | SetTradeStatus
+@dataclass(frozen=True)
+class SetSpot:
+    agent_id: str
+    spot: str
+
+
+Mutation = MoveItem | AdjustCoins | OpenTrade | SetTradeStatus | SetSpot
 
 
 @dataclass(frozen=True)
@@ -205,6 +244,13 @@ def validate(state: WorldView, action: Action) -> Ok | Err:
     match action:
         case Say() | Emote():
             return Ok()
+
+        case MoveTo(spot=spot):
+            if spot not in CAFE_SPOTS:
+                return Err(Code.INVALID_ARG, f"no spot '{spot}' (know: {sorted(CAFE_SPOTS)})")
+            if actor.spot == spot:
+                return Ok()  # already there — harmless no-op
+            return Ok((SetSpot(agent_id=actor.id, spot=spot),))
 
         case Whisper(target=target_id):
             target = _target(state, action.actor, target_id)
