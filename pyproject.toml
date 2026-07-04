@@ -20,6 +20,8 @@ dependencies = [
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.1"]
+# One-time UI art generation (scripts/generate_art.py); NOT needed at runtime.
+art = ["pillow>=10.0", "rembg>=2.0", "onnxruntime>=1.17"]
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",

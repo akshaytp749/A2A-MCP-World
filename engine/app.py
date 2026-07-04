@@ -178,6 +178,12 @@ def create_app() -> FastAPI:
 
     app.include_router(gateway_router)
 
+    assets = Path("web/assets")
+    if assets.is_dir():
+        from fastapi.staticfiles import StaticFiles
+
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
     ui = Path("web/index.html")
     if ui.exists():
 
