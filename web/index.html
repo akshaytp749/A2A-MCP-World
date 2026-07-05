@@ -194,7 +194,7 @@ const SPOTS = {
 };
 function spotXY(spot,i,n){ const [fx,fy]=SPOTS[spot]||SPOTS['bar'];
   return [fx + (n>1?(i-(n-1)/2)*54:0), fy + (n>1?Math.abs(i-(n-1)/2)*8:0)]; }
-function depth(fy){ return 1.35 + 0.7*Math.max(0,Math.min(1,(fy-260)/210)); }  // sprite scale
+function depth(fy){ return 1.8 + 0.8*Math.max(0,Math.min(1,(fy-260)/210)); }  // sprite scale
 
 const actors = new Map();
 let selected=null, hovered=null, clockPhase='evening', worldPaused=false;
@@ -229,9 +229,9 @@ function frame(now){
   const list=[...actors.values()].sort((p,q)=>p.y-q.y);
   for(const a of list) drawActor(a,now);
   const placed=[];
-  for(const a of list){ const box=actorBox(a), s=depth(a.y);
+  for(const a of list){ const box=actorBox(a);
     const text=a.thinking?'·'.repeat(1+Math.floor(now/380)%3):(a.bubble&&now<a.bubbleUntil?a.bubble:null);
-    if(text) drawBubble(box.cx, box.y - 2*Math.round(26*s) - 12, text, placed); }  // above face avatar
+    if(text) drawBubble(box.cx, box.top-6, text, placed); }
   ctx.fillStyle=tintFor(clockPhase); ctx.fillRect(0,0,W,H);
   if(worldPaused){ ctx.fillStyle='rgba(30,8,8,0.28)'; ctx.fillRect(0,0,W,H); }
   requestAnimationFrame(frame);
@@ -249,22 +249,6 @@ function drawActor(a,now){
     ctx.imageSmoothingEnabled=false;
     ctx.drawImage(a.img, col*FR,row*FR,FR,FR, Math.round(box.x),Math.round(box.y), Math.round(box.w),Math.round(box.h)); }
   if(a.id===selected||a.id===hovered) ctx.restore();
-  // floating FACE avatar above the head — recognisable face, always visible
-  const p=portraits[a.id];
-  if(p && p.width){
-    const bobY = Math.sin(now/900+(a.x))*1.5;
-    const R = Math.round(26*s), fx = Math.round(a.x);
-    const fy = Math.max(R+3, Math.round(box.y - R - 4 + bobY));
-    const sel = a.id===selected||a.id===hovered;
-    ctx.save();
-    ctx.beginPath(); ctx.arc(fx,fy,R+2,0,7); ctx.fillStyle=sel?'#e6b055':'#241d15'; ctx.fill();
-    ctx.beginPath(); ctx.arc(fx,fy,R,0,7); ctx.closePath(); ctx.clip();
-    ctx.imageSmoothingEnabled=true;
-    // crop a head-and-shoulders square from the top of the portrait
-    const side=Math.min(p.width, p.height*0.52);
-    ctx.drawImage(p,(p.width-side)/2, p.height*0.02, side, side, fx-R, fy-R, R*2, R*2);
-    ctx.restore();
-  }
   // name plate (below feet)
   ctx.font='600 12px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='center';
   const lw=ctx.measureText(a.name).width+14;
