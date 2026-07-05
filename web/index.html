@@ -229,9 +229,9 @@ function frame(now){
   const list=[...actors.values()].sort((p,q)=>p.y-q.y);
   for(const a of list) drawActor(a,now);
   const placed=[];
-  for(const a of list){ const box=actorBox(a);
+  for(const a of list){ const box=actorBox(a), s=depth(a.y);
     const text=a.thinking?'·'.repeat(1+Math.floor(now/380)%3):(a.bubble&&now<a.bubbleUntil?a.bubble:null);
-    if(text) drawBubble(box.cx, box.top-6, text, placed); }
+    if(text) drawBubble(box.cx, box.y - 2*Math.round(26*s) - 12, text, placed); }  // above face avatar
   ctx.fillStyle=tintFor(clockPhase); ctx.fillRect(0,0,W,H);
   if(worldPaused){ ctx.fillStyle='rgba(30,8,8,0.28)'; ctx.fillRect(0,0,W,H); }
   requestAnimationFrame(frame);
@@ -249,10 +249,26 @@ function drawActor(a,now){
     ctx.imageSmoothingEnabled=false;
     ctx.drawImage(a.img, col*FR,row*FR,FR,FR, Math.round(box.x),Math.round(box.y), Math.round(box.w),Math.round(box.h)); }
   if(a.id===selected||a.id===hovered) ctx.restore();
-  // name plate
+  // floating FACE avatar above the head — recognisable face, always visible
+  const p=portraits[a.id];
+  if(p && p.width){
+    const bobY = Math.sin(now/900+(a.x))*1.5;
+    const R = Math.round(26*s), fx = Math.round(a.x);
+    const fy = Math.max(R+3, Math.round(box.y - R - 4 + bobY));
+    const sel = a.id===selected||a.id===hovered;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(fx,fy,R+2,0,7); ctx.fillStyle=sel?'#e6b055':'#241d15'; ctx.fill();
+    ctx.beginPath(); ctx.arc(fx,fy,R,0,7); ctx.closePath(); ctx.clip();
+    ctx.imageSmoothingEnabled=true;
+    // crop a head-and-shoulders square from the top of the portrait
+    const side=Math.min(p.width, p.height*0.52);
+    ctx.drawImage(p,(p.width-side)/2, p.height*0.02, side, side, fx-R, fy-R, R*2, R*2);
+    ctx.restore();
+  }
+  // name plate (below feet)
   ctx.font='600 12px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='center';
   const lw=ctx.measureText(a.name).width+14;
-  ctx.fillStyle=a.id===selected?'rgba(230,176,85,0.92)':'rgba(0,0,0,0.6)';
+  ctx.fillStyle=a.id===selected?'rgba(230,176,85,0.92)':'rgba(0,0,0,0.65)';
   rr(a.x-lw/2,a.y+2,lw,18,9); ctx.fill();
   ctx.fillStyle=a.id===selected?'#1e1408':'#efe6d5'; ctx.fillText(a.name,a.x,a.y+15); ctx.textAlign='left';
 }
