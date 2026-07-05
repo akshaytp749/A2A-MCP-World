@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Interval</title>
 <style>
-  :root {
-    --bg:#0e0b08; --panel:#1b1510; --panel2:#241d15; --line:#3a2c1e;
-    --ink:#efe6d5; --dim:#a89a82; --accent:#e6b055; --me:#8bbf6f;
-  }
+  :root { --bg:#0e0b08; --panel:#1b1510; --panel2:#241d15; --line:#3a2c1e;
+          --ink:#efe6d5; --dim:#a89a82; --accent:#e6b055; }
   * { box-sizing:border-box; margin:0; }
   body { background:radial-gradient(1200px 700px at 50% -10%, #241a12, var(--bg));
          color:var(--ink); font:15px/1.55 'Segoe UI', system-ui, sans-serif;
@@ -21,12 +19,12 @@
   .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#6fae5a;
          margin-right:5px; box-shadow:0 0 6px #6fae5a; }
   .dot.paused { background:#d0694f; box-shadow:0 0 6px #d0694f; }
-  main { flex:1; display:grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
-         gap:16px; padding:16px 20px; max-width:1440px; width:100%; margin:0 auto; }
-  @media (max-width: 920px) { main { grid-template-columns: 1fr; } }
+  main { flex:1; display:grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
+         gap:16px; padding:16px 20px; max-width:1460px; width:100%; margin:0 auto; }
+  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
   #stage { position:relative; width:100%; border-radius:14px; overflow:hidden;
            box-shadow:0 20px 60px #000a, inset 0 0 0 1px #ffffff10; line-height:0; }
-  canvas { width:100%; display:block; background:#0a0705;
+  canvas { width:100%; display:block; background:#161009;
            image-rendering:pixelated; image-rendering:crisp-edges; }
   #banner { position:absolute; top:14px; left:50%; transform:translateX(-50%);
             background:#000000cc; color:var(--accent); padding:8px 18px; font-size:13px;
@@ -35,25 +33,27 @@
   #banner.alert { color:#f0937c; border-color:#f0937c66; }
   #hint { position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
           color:#efe6d5cc; font-size:12px; background:#00000088; padding:5px 14px;
-          border-radius:20px; pointer-events:none; letter-spacing:.5px; }
-  #feed { margin-top:10px; max-height:16vh; overflow-y:auto; font-size:12px; color:var(--dim);
+          border-radius:20px; pointer-events:none; }
+  #feed { margin-top:10px; max-height:15vh; overflow-y:auto; font-size:12px; color:var(--dim);
           background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
   #feed .actor { color:var(--accent); font-weight:600; }
   #feed .tk { color:#6b5c47; }
   .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px;
            padding:16px; display:flex; flex-direction:column; box-shadow:0 8px 30px #0006; }
-  .panel h2 { font-size:12px; color:var(--dim); margin-bottom:10px; letter-spacing:1px;
-              text-transform:uppercase; font-weight:600; }
-  #target { color:var(--accent); }
-  #chatlog { flex:1; overflow-y:auto; min-height:34vh; max-height:52vh; margin-bottom:10px;
+  #who { display:flex; gap:12px; align-items:center; margin-bottom:12px; min-height:76px; }
+  #portrait { width:72px; height:72px; border-radius:12px; object-fit:cover; object-position:top;
+              border:2px solid var(--line); background:var(--panel2); flex:none; display:none; }
+  #who h2 { font-size:12px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
+  #who .nm { font-size:18px; color:var(--accent); font-family:Georgia, serif; margin-top:2px; }
+  #chatlog { flex:1; overflow-y:auto; min-height:32vh; max-height:50vh; margin-bottom:10px;
              display:flex; flex-direction:column; gap:8px; padding-right:4px; }
-  .msg { padding:9px 13px; border-radius:14px; max-width:88%; font-size:14px; line-height:1.5;
+  .msg { padding:9px 13px; border-radius:14px; max-width:90%; font-size:14px; line-height:1.5;
          animation:pop .18s ease; }
   .msg.me { align-self:flex-end; background:linear-gradient(180deg,#33421f,#2a3a1c);
             border:1px solid #47612f; color:#dcefcb; border-bottom-right-radius:4px; }
   .msg.npc { align-self:flex-start; background:var(--panel2); border:1px solid var(--line);
              border-bottom-left-radius:4px; }
-  .msg .who { font-size:11px; color:var(--dim); margin-bottom:2px; font-weight:600; }
+  .msg .who2 { font-size:11px; color:var(--dim); margin-bottom:2px; font-weight:600; }
   .msg.pending { color:var(--dim); font-style:italic; }
   @keyframes pop { from{opacity:0; transform:translateY(6px);} to{opacity:1;} }
   input, select, button, textarea { background:var(--panel2); color:var(--ink);
@@ -67,8 +67,7 @@
   #msg { resize:none; height:44px; }
   footer { padding:10px 20px; color:var(--dim); font-size:11px; border-top:1px solid var(--line);
            text-align:center; }
-  details { margin-top:12px; color:var(--dim); font-size:13px; }
-  summary { cursor:pointer; }
+  details { margin-top:12px; color:var(--dim); font-size:13px; } summary { cursor:pointer; }
   #opstatus { margin-top:6px; font-size:12px; min-height:16px; }
 </style>
 </head>
@@ -80,14 +79,17 @@
 <main>
   <section id="left">
     <div id="stage">
-      <canvas id="scene" width="1152" height="648"></canvas>
+      <canvas id="scene" width="1024" height="576"></canvas>
       <div id="banner"></div>
       <div id="hint">click a figure to speak with them</div>
     </div>
     <div id="feed"></div>
   </section>
   <section class="panel">
-    <h2>Talking to <span id="target">— pick someone</span></h2>
+    <div id="who">
+      <img id="portrait" alt="">
+      <div><h2>Talking to</h2><div class="nm" id="target">— pick someone</div></div>
+    </div>
     <div class="row"><input type="text" id="name" placeholder="Your name"></div>
     <div id="chatlog"></div>
     <div class="row">
@@ -102,469 +104,253 @@
         <button onclick="op('pause', false)">Resume</button>
       </div>
       <div class="row">
-        <select id="ejectsel"></select>
-        <button onclick="op('eject')">Eject</button>
+        <select id="ejectsel"></select><button onclick="op('eject')">Eject</button>
       </div>
       <div id="opstatus"></div>
     </details>
   </section>
 </main>
-<footer>
-  Fictional AI portrayals of historical figures — not affiliated with their estates.
-</footer>
+<footer>Fictional AI portrayals of historical figures — not affiliated with their estates.</footer>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
 $('name').value = localStorage.getItem('interval-name') || '';
 
-/* ============================================================ pixel engine
-   Everything is drawn to a low-res offscreen buffer (BW×BH) then blitted to
-   the visible canvas at integer scale S with nearest-neighbour → crisp pixels.
-   Text/speech bubbles are drawn on the main canvas at full res for legibility. */
-const BW = 384, BH = 216, S = 3;
 const cv = $('scene'), ctx = cv.getContext('2d');
-ctx.imageSmoothingEnabled = false;
-const buf = document.createElement('canvas'); buf.width = BW; buf.height = BH;
-const g = buf.getContext('2d');
+const W = cv.width, H = cv.height;
+const KNOWN = ['socrates','twain','tesla','darwin','ramanujan'];
 
-function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x|0, y|0, w|0, h|0); }
+/* ---- assets ---- */
+const sprites = {}, portraits = {};
+function loadImg(src){ return new Promise(r=>{ const i=new Image();
+  i.onload=()=>r(i); i.onerror=()=>r(null); i.src=src; }); }
 
-/* ------------------------------------------------------------ the room */
-function paintRoom(g, t) {
-  // ---- walls (upper third) ----
-  for (let y = 0; y < 74; y += 2) {
-    px(0, y, BW, 2, (y % 8 < 4) ? '#4a3722' : '#443220');
+/* LPC walk sheet: 9 cols x 4 rows of 64px. rows: 0 up,1 left,2 down,3 right.
+   col 0 = idle; cols 1..8 = walk cycle. */
+const FR = 64, ROWS = {up:0,left:1,down:2,right:3};
+
+/* ---- room (drawn as clean tiles) ---- */
+const TILE = 32;
+function paintRoom(t) {
+  // floor
+  for (let y=176; y<H; y+=TILE) for (let x=0; x<W; x+=TILE) {
+    const a = ((x/TILE + y/TILE) & 1);
+    ctx.fillStyle = a ? '#6b4a2a' : '#5f4326'; ctx.fillRect(x,y,TILE,TILE);
+    ctx.fillStyle = '#7a5732'; ctx.fillRect(x,y,TILE,2);
+    ctx.fillStyle = '#4a3420'; ctx.fillRect(x,y+TILE-2,TILE,2);
+    ctx.fillStyle = '#4a341f'; ctx.fillRect(x,y,2,TILE);
   }
-  for (let x = 0; x < BW; x += 24) px(x, 0, 1, 74, '#3a2b1a');       // plank seams
-  px(0, 70, BW, 4, '#2c2013');                                        // wall base trim
-  // ---- floor (lower two-thirds), 3/4 perspective: rows get taller toward front ----
-  let y = 74, row = 0, hgt = 6;
-  while (y < BH) {
-    px(0, y, BW, hgt, (row % 2) ? '#6b4a2a' : '#5f4326');
-    px(0, y, BW, 1, '#7a5732');                                       // lit top edge
-    px(0, y + hgt - 1, BW, 1, '#4a3420');                             // shadow seam
-    // vertical board lines, offset per row
-    for (let x = (row % 2) * 26; x < BW; x += 52) px(x, y, 1, hgt, '#4a341f');
-    y += hgt; row++; hgt += 1;
-  }
-  // ---- rug (center) ----
-  rug(150, 150, 130, 54, '#7a2f2c', '#9a4340');
-  // ---- chalkboard (left wall) ----
-  px(18, 12, 108, 50, '#5a4530');                                     // frame
-  px(22, 16, 100, 42, '#16281f');                                     // slate
-  g.fillStyle = '#a7d3ba'; g.font = '7px monospace';
-  ['e^iπ+1=0   ∂ψ=iħ∂ₜψ', 'Σ 1/n² = π²/6', '∇·E = ρ/ε₀    ∮', 'π(x) ~ x/ln x'].forEach(
-    (s, i) => g.fillText(s, 26, 26 + i*10));
-  // ---- courtyard window (center wall) ----
-  px(168, 10, 56, 54, '#5a4530');
-  const sky = g.createLinearGradient(0, 12, 0, 62); sky.addColorStop(0, '#0b1330');
-  sky.addColorStop(1, '#152047'); g.fillStyle = sky; g.fillRect(172, 14, 48, 46);
-  g.fillStyle = '#e9e0cd';
-  [[180,22],[196,18],[210,30],[188,40],[204,48],[214,42],[176,50]].forEach(
-    ([sx, sy]) => { const tw = 0.5 + 0.5*Math.sin(t/500 + sx); g.globalAlpha = 0.5 + 0.5*tw;
-                    g.fillRect(sx, sy, 1, 1); }); g.globalAlpha = 1;
-  px(194, 14, 2, 46, '#5a4530'); px(172, 36, 48, 2, '#5a4530');       // muntins
-  // ---- bar + shelves (right) ----
-  px(250, 8, 134, 34, '#2a1f13');                                     // shelf backing
-  ['#8a4630','#3f7a52','#a3823a','#5b83b8','#8a4630','#a3823a','#3f7a52','#7a4a8a'].forEach(
-    (c, i) => { px(258 + i*15, 12, 7, 24, c); px(259 + i*15, 13, 2, 22, '#ffffff33'); });
-  px(244, 60, 140, 4, '#7a5734');                                     // bar top lit
-  px(244, 64, 140, 22, '#5a3d22');                                    // bar face
-  px(244, 84, 140, 3, '#3a2614');
-  for (let sx = 260; sx < 380; sx += 34) stool(sx, 92);               // stools in front
-  // ---- tables + chairs (left / center-front) ----
-  table(40, 176); table(132, 186);
-  // ---- hanging lamps + warm glow ----
-  [80, 200, 320].forEach(lx => lamp(lx, t));
+  // back wall
+  const wg = ctx.createLinearGradient(0,0,0,176); wg.addColorStop(0,'#3a2b1a'); wg.addColorStop(1,'#2c2013');
+  ctx.fillStyle = wg; ctx.fillRect(0,0,W,176);
+  for (let x=0; x<W; x+=TILE){ ctx.fillStyle='#241a10'; ctx.fillRect(x,0,1,176); }
+  ctx.fillStyle='#4a3722'; ctx.fillRect(0,150,W,6); ctx.fillStyle='#5a4530'; ctx.fillRect(0,168,W,8);
+  // chalkboard
+  ctx.fillStyle='#5a4530'; ctx.fillRect(40,26,232,110);
+  ctx.fillStyle='#15281f'; ctx.fillRect(48,34,216,94);
+  ctx.fillStyle='#a7d3ba'; ctx.font='15px monospace';
+  ['e^iπ + 1 = 0','Σ 1/n² = π²/6','∇·E = ρ/ε₀','π(x) ~ x/ln x'].forEach((s,i)=>ctx.fillText(s,58,58+i*22));
+  // courtyard window
+  ctx.fillStyle='#5a4530'; ctx.fillRect(430,24,150,120);
+  const sky=ctx.createLinearGradient(0,30,0,140); sky.addColorStop(0,'#0b1330'); sky.addColorStop(1,'#16224a');
+  ctx.fillStyle=sky; ctx.fillRect(438,32,134,104);
+  ctx.fillStyle='#e9e0cd';
+  [[460,50],[490,42],[520,66],[548,48],[476,96],[512,110],[556,92],[500,80]].forEach(([x,y])=>{
+    const tw=0.5+0.5*Math.sin(t/500+x); ctx.globalAlpha=0.5+0.5*tw; ctx.fillRect(x,y,2,2); });
+  ctx.globalAlpha=1; ctx.fillStyle='#5a4530'; ctx.fillRect(503,32,3,104); ctx.fillRect(438,82,134,3);
+  // bar + shelf (right)
+  ctx.fillStyle='#241a10'; ctx.fillRect(660,20,364,54);
+  ['#8a4630','#3f7a52','#a3823a','#5b83b8','#8a4630','#a3823a','#3f7a52','#7a4a8a','#8a4630'].forEach((c,i)=>{
+    ctx.fillStyle=c; ctx.fillRect(676+i*40,30,16,36); ctx.fillStyle='#ffffff33'; ctx.fillRect(678+i*40,32,3,30); });
+  const bg=ctx.createLinearGradient(0,150,0,210); bg.addColorStop(0,'#7a5433'); bg.addColorStop(1,'#583a20');
+  ctx.fillStyle=bg; ctx.fillRect(628,150,396,60); ctx.fillStyle='#8a6238'; ctx.fillRect(628,150,396,8);
+  ctx.fillStyle='#3d2914'; ctx.fillRect(628,204,396,6);
+  // rug
+  roundFill(300,360,300,150,'#5a302e'); roundFill(316,376,268,118,'#7a4442'); roundFill(336,396,228,78,'#5a302e');
+  // tables
+  table(150,430); table(430,410);
+  // lamp glows
+  [150,470,780].forEach(x=>{
+    ctx.fillStyle='#2a2118'; ctx.fillRect(x-2,0,4,14); ctx.fillStyle='#f0c561'; ctx.fillRect(x-9,14,18,10);
+    ctx.fillStyle='#fff3c9'; ctx.fillRect(x-4,17,8,5);
+    const gl=ctx.createRadialGradient(x,20,8,x,20,150); const fl=0.85+0.15*Math.sin(t/150+x);
+    gl.addColorStop(0,`rgba(255,206,120,${0.16*fl})`); gl.addColorStop(1,'rgba(255,206,120,0)');
+    ctx.fillStyle=gl; ctx.fillRect(x-150,0,300,260); });
   // vignette
-  const vg = g.createRadialGradient(BW/2, BH/2, BH*0.42, BW/2, BH/2, BH*1.05);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)');
-  g.fillStyle = vg; g.fillRect(0, 0, BW, BH);
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.5,W/2,H/2,H*1.05);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
-function rug(x, y, w, h, dark, light) {
-  px(x, y, w, h, dark); px(x+4, y+4, w-8, h-8, light); px(x+9, y+9, w-18, h-18, dark);
-  px(x+13, y+13, w-26, h-26, light);
-}
-function stool(x, y) { px(x-5, y, 10, 3, '#6e4c2c'); px(x-4, y+3, 2, 8, '#3a2614');
-                       px(x+2, y+3, 2, 8, '#3a2614'); }
-function table(x, y) {
-  px(x+3, y+8, 3, 12, '#2a1c10'); px(x+22, y+8, 3, 12, '#2a1c10');
-  px(x, y, 28, 9, '#6e4c2c'); px(x, y, 28, 2, '#8a6238'); px(x, y+7, 28, 2, '#4a3018');
-}
-function lamp(x, t) {
-  px(x-1, 0, 2, 8, '#241a10');
-  px(x-5, 8, 10, 6, '#2a2016'); px(x-4, 9, 8, 4, '#f0c561');
-  const flick = 0.85 + 0.15*Math.sin(t/140 + x);
-  const glow = g.createRadialGradient(x, 12, 4, x, 12, 60);
-  glow.addColorStop(0, `rgba(255,206,120,${0.22*flick})`);
-  glow.addColorStop(1, 'rgba(255,206,120,0)');
-  g.fillStyle = glow; g.fillRect(x-60, 12-40, 120, 110);
-}
+function roundFill(x,y,w,h,c){ ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.fill(); }
+function table(x,y){ ctx.fillStyle='#2a1e12'; ctx.fillRect(x+8,y+30,7,26); ctx.fillRect(x+58,y+30,7,26);
+  const g=ctx.createLinearGradient(0,y,0,y+32); g.addColorStop(0,'#6e4c2c'); g.addColorStop(1,'#54371e');
+  ctx.fillStyle=g; ctx.fillRect(x,y,74,32); ctx.fillStyle='#8a6238'; ctx.fillRect(x,y,74,6); }
 
-/* --------------------------------------------------- animated characters
-   Parametric side-view humanoid. Legs & arms swing when moving; robed figures
-   sway their hem. Recognisable by silhouette + palette. */
-const FIG = {
-  twain:     { skin:'#e7b48a', sskin:'#c98d63', hair:'#f2efe8', hairShade:'#cdc9bf',
-               big:1, mous:'#f2efe8', coat:'#e6ddc6', coatSh:'#ccc3aa', leg:'#e0d7bf',
-               shoe:'#3a2a1a', collar:'#ffffff', tie:'#241a12' },
-  tesla:     { skin:'#e7b48a', sskin:'#c98d63', hair:'#241d18', hairShade:'#120e0b',
-               mousThin:1, coat:'#26221f', coatSh:'#161311', leg:'#26221f',
-               shoe:'#0f0d0b', collar:'#f4efe4', tie:'#111' },
-  socrates:  { skin:'#e7b48a', sskin:'#c98d63', bald:1, beard:'#eae3d2',
-               beardShade:'#c7bfa9', robe:'#e2d6b6', robeSh:'#c6b892', barefoot:1 },
-  darwin:    { skin:'#e0ad84', sskin:'#c2895e', bald:1, sideHair:'#e9e3d4',
-               beard:'#eae3d2', beardShade:'#c7bfa9', beardBig:1, coat:'#3a2e22',
-               coatSh:'#251c14', leg:'#2c2318', shoe:'#141010' },
-  ramanujan: { skin:'#a26a41', sskin:'#7d4f2e', hair:'#1c1712', hairShade:'#0e0b08',
-               robe:'#eadfbf', robeSh:'#cbbf98', slate:1, barefoot:1 },
-  visitor:   { skin:'#e7b48a', sskin:'#c98d63', hair:'#5a3f28', hairShade:'#3c2a18',
-               coat:'#3a4c72', coatSh:'#26344f', leg:'#2e3a52', shoe:'#141820', satchel:1 },
-};
-
-function drawFigure(cx, footY, d, phase, moving, facing, scale) {
-  g.save();
-  g.translate(Math.round(cx), Math.round(footY));
-  g.scale(facing, 1); g.scale(scale, scale);
-  const s = moving ? Math.sin(phase) : 0;
-  const bob = moving ? -Math.abs(Math.sin(phase*2)) * 1.2 : Math.sin(phase*0.5) * -0.5;
-  const legSw = s * 3, armSw = -s * 2.6;
-  const T = -30 + bob;                 // shoulder line y (feet at 0)
-  const robed = d.robe;
-
-  // ---- legs / lower body (draw before torso) ----
-  if (robed) {
-    const hem = 2 + Math.abs(s) * 1.5;
-    g.fillStyle = d.robeSh;
-    g.beginPath(); g.moveTo(-5, T+8); g.lineTo(5, T+8);
-    g.lineTo(7 + hem, 0); g.lineTo(-7 - hem, 0); g.closePath(); g.fill();
-    g.fillStyle = d.robe;
-    g.beginPath(); g.moveTo(-5, T+8); g.lineTo(4, T+8);
-    g.lineTo(6 + hem, -1); g.lineTo(-6 - hem, -1); g.closePath(); g.fill();
-    // feet peek
-    const fc = d.barefoot ? d.skin : (d.shoe || '#222');
-    px(-4, -2, 4, 2, fc); px(1, -2, 4, 2, fc);
-  } else {
-    // back leg (darker), front leg
-    g.fillStyle = shade(d.leg);
-    rrect(-4 - legSw, T+9, 4, 13);
-    g.fillStyle = d.shoe; rrect(-5 - legSw, T+20, 5, 3);
-    g.fillStyle = d.leg;
-    rrect(0 + legSw, T+9, 4, 13);
-    g.fillStyle = d.shoe; rrect(0 + legSw, T+20, 5, 3);
-  }
-
-  // ---- back arm ----
-  g.fillStyle = shade(d.coat || d.robe);
-  rrect(-7, T+1 - armSw*0.3, 3, 11 + armSw);
-  g.fillStyle = d.sskin; px(-7, T+11 + armSw - armSw*0.3, 3, 2);
-
-  // ---- torso / coat ----
-  if (!robed) {
-    g.fillStyle = d.coatSh; rrect(-6, T, 12, 16);
-    g.fillStyle = d.coat;   rrect(-6, T, 9, 16);
-    if (d.collar) { g.fillStyle = d.collar; px(-2, T, 4, 4); }
-    if (d.tie) { g.fillStyle = d.tie; px(-1, T+2, 2, 6); }
-    if (d.satchel) { g.fillStyle = '#5a3a22'; rrect(-8, T+6, 4, 6);
-                     g.fillStyle = '#3a2414'; px(-8, T+2, 12, 1); }
-  } else {
-    g.fillStyle = d.robeSh; rrect(-6, T-1, 12, 12);
-    g.fillStyle = d.robe;   rrect(-6, T-1, 9, 12);
-    if (d.slate) { g.fillStyle = '#20242a'; rrect(3, T+5, 7, 8);
-                   g.fillStyle = '#3a4048'; px(4, T+6, 5, 1); }
-  }
-
-  // ---- front arm (swings) ----
-  g.fillStyle = d.coat || d.robe;
-  rrect(3, T+1 + armSw*0.3, 3, 11 - armSw*0.4);
-  g.fillStyle = d.skin; px(3, T+11 - armSw*0.4 + armSw*0.3, 3, 2);
-
-  // ---- head ----
-  const hy = T - 12;
-  g.fillStyle = d.sskin; rrect(-5, hy, 10, 12);
-  g.fillStyle = d.skin;  rrect(-5, hy, 8, 12);
-  // eye
-  g.fillStyle = '#20140c'; px(1, hy+5, 2, 2);
-  // beard
-  if (d.beard) {
-    g.fillStyle = d.beardShade;
-    const bb = d.beardBig ? 10 : 7;
-    g.beginPath(); g.moveTo(-5, hy+6); g.lineTo(6, hy+6);
-    g.lineTo(3, hy+6+bb); g.lineTo(-4, hy+6+bb); g.closePath(); g.fill();
-    g.fillStyle = d.beard;
-    g.beginPath(); g.moveTo(-5, hy+6); g.lineTo(5, hy+6);
-    g.lineTo(2, hy+5+bb); g.lineTo(-4, hy+5+bb); g.closePath(); g.fill();
-  }
-  if (d.mous) { g.fillStyle = d.mous; rrect(-1, hy+7, 6, 3); px(-2, hy+8, 3, 2); }
-  if (d.mousThin) { g.fillStyle = d.hair; px(0, hy+8, 4, 1); }
-  // hair
-  if (!d.bald) {
-    g.fillStyle = d.hairShade;
-    const hh = d.big ? 6 : 4;
-    rrect(-6, hy-3, 13, hh);
-    g.fillStyle = d.hair; rrect(-6, hy-3, 13, hh-1);
-    if (d.big) { px(-7, hy-1, 3, 6); px(5, hy-1, 3, 6); }   // wild sides
-  } else {
-    g.fillStyle = d.skin; rrect(-5, hy-2, 10, 3);            // bald pate
-    if (d.sideHair) { g.fillStyle = d.sideHair; px(-6, hy+1, 2, 6); px(5, hy+1, 2, 6); }
-  }
-  g.restore();
-
-  function shade(c){ return d._sh?.[c] || darken(c); }
-  function rrect(x,y,w,h){ g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
-}
-function darken(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  const r = Math.max(0, (n>>16 & 255) - 26), gg = Math.max(0, (n>>8 & 255) - 26),
-        b = Math.max(0, (n & 255) - 26);
-  return `rgb(${r},${gg},${b})`;
-}
-
-/* ---------------------------------------------------- actors & spots */
+/* ---- actors ---- */
 const SPOTS = {
-  'chalkboard':     [72, 150], 'alcove': [120, 138], 'corner-table': [46, 196],
-  'window-table':   [150, 188], 'courtyard-door': [205, 140], 'rug': [196, 176],
-  'bar':            [300, 156],
+  'chalkboard':[170,320],'alcove':[300,268],'corner-table':[132,452],'window-table':[430,406],
+  'courtyard-door':[560,282],'rug':[520,442],'bar':[832,360],
 };
-function spotXY(spot, i, n) {
-  const [fx, fy] = SPOTS[spot] || SPOTS['bar'];
-  const dx = n > 1 ? (i - (n-1)/2) * 26 : 0;
-  const dy = n > 1 ? Math.abs(i - (n-1)/2) * 4 : 0;
-  return [fx + dx, fy + dy];
-}
-function figScale(fy) { return 0.9 + 0.35 * Math.max(0, Math.min(1, (fy-134)/70)); }
+function spotXY(spot,i,n){ const [fx,fy]=SPOTS[spot]||SPOTS['bar'];
+  return [fx + (n>1?(i-(n-1)/2)*54:0), fy + (n>1?Math.abs(i-(n-1)/2)*8:0)]; }
+function depth(fy){ return 1.35 + 0.7*Math.max(0,Math.min(1,(fy-260)/210)); }  // sprite scale
 
 const actors = new Map();
-let selected = null, hovered = null, clockPhase = 'evening', worldPaused = false;
+let selected=null, hovered=null, clockPhase='evening', worldPaused=false;
 
-function ensureActor(id, name, spot) {
-  let a = actors.get(id);
-  if (!a) {
-    const [x, y] = spotXY(spot, 0, 1);
-    a = { id, name, def: FIG[id] || FIG.visitor, x, y, tx:x, ty:y, facing:1,
-          phase:Math.random()*6, moving:false, queue:[], bubble:null, bubbleUntil:0,
-          thinking:false };
-    actors.set(id, a);
-  }
-  a.name = name; return a;
+function ensureActor(id,name,spot){
+  let a=actors.get(id);
+  if(!a){ const [x,y]=spotXY(spot,0,1);
+    a={id,name,x,y,tx:x,ty:y,dir:'down',moving:false,anim:0,queue:[],bubble:null,bubbleUntil:0,thinking:false};
+    actors.set(id,a); }
+  a.name=name; a.img = sprites[id] || sprites.visitor; return a;
 }
-function relayout(occ) {
-  const by = {}; occ.forEach(o => (by[o.spot] = by[o.spot] || []).push(o));
-  for (const [spot, list] of Object.entries(by))
-    list.forEach((o, i) => { const a = ensureActor(o.id, o.name, spot);
-      const [tx, ty] = spotXY(spot, i, list.length); a.tx = tx; a.ty = ty; });
-}
+function relayout(occ){ const by={}; occ.forEach(o=>(by[o.spot]=by[o.spot]||[]).push(o));
+  for(const [spot,list] of Object.entries(by)) list.forEach((o,i)=>{ const a=ensureActor(o.id,o.name,spot);
+    const [tx,ty]=spotXY(spot,i,list.length); a.tx=tx; a.ty=ty; }); }
 
-/* ---------------------------------------------------- speech */
-function say(id, text, emote=false) {
-  const a = actors.get(id); if (!a) return;
-  const clip = text.length > 150 ? text.slice(0,150).replace(/\s+\S*$/, '')+'…' : text;
-  a.queue.push((emote?'‹ ':'') + clip + (emote?' ›':''));
-  if (a.queue.length > 3) a.queue.shift();
-}
+function say(id,text,emote=false){ const a=actors.get(id); if(!a) return;
+  const clip=text.length>150?text.slice(0,150).replace(/\s+\S*$/,'')+'…':text;
+  a.queue.push((emote?'‹ ':'')+clip+(emote?' ›':'')); if(a.queue.length>3) a.queue.shift(); }
 
-/* ---------------------------------------------------- main loop */
-let last = performance.now();
-function frame(now) {
-  const dt = Math.min(50, now - last); last = now;
-  // update actors
-  for (const a of actors.values()) {
-    const dx = a.tx - a.x, dy = a.ty - a.y, dist = Math.hypot(dx, dy);
-    a.moving = dist > 1.2;
-    if (a.moving) {
-      const sp = 0.05 * dt; a.x += dx/dist * sp; a.y += dy/dist * sp;
-      if (Math.abs(dx) > 0.4) a.facing = dx < 0 ? -1 : 1;
-      a.phase += dt * 0.018;
-    } else { a.phase += dt * 0.004; }
-    if ((!a.bubble || now > a.bubbleUntil)) {
-      a.bubble = null;
-      if (a.queue.length) { a.bubble = a.queue.shift();
-        a.bubbleUntil = now + Math.min(12000, 3800 + a.bubble.length*45); }
-    }
+/* ---- render ---- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(50,now-last); last=now;
+  paintRoom(now);
+  for(const a of actors.values()){
+    const dx=a.tx-a.x, dy=a.ty-a.y, d=Math.hypot(dx,dy); a.moving=d>1.5;
+    if(a.moving){ const sp=Math.min(d,0.09*dt); a.x+=dx/d*sp; a.y+=dy/d*sp; a.anim+=dt;
+      a.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down'); }
+    if(!a.bubble||now>a.bubbleUntil){ a.bubble=null;
+      if(a.queue.length){ a.bubble=a.queue.shift(); a.bubbleUntil=now+Math.min(12000,3800+a.bubble.length*45); } }
   }
-  // ---- draw pixel scene to buffer ----
-  paintRoom(g, now);
-  const list = [...actors.values()].sort((p,q) => p.y - q.y);
-  for (const a of list) {
-    const sc = figScale(a.y);
-    // shadow
-    g.fillStyle = 'rgba(0,0,0,0.28)';
-    g.beginPath(); g.ellipse(a.x, a.y, 7*sc, 2.5*sc, 0, 0, 7); g.fill();
-    if (a.id === selected || a.id === hovered) {
-      g.save(); g.globalAlpha = 0.5;
-      g.strokeStyle = a.id === selected ? '#e6b055' : '#ffffff';
-      g.lineWidth = 1; g.strokeRect(a.x - 9*sc, a.y - 46*sc, 18*sc, 47*sc); g.restore();
-    }
-    drawFigure(a.x, a.y, a.def, a.phase, a.moving, a.facing, sc);
-  }
-  // ---- blit to main canvas (crisp upscale) ----
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(buf, 0, 0, cv.width, cv.height);
-  // ---- overlays at full res: name tags + bubbles ----
-  const placed = [];
-  for (const a of list) {
-    const sc = figScale(a.y);
-    const hx = a.x * S, headY = (a.y - 46*sc) * S;
-    // name tag
-    ctx.font = '600 12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'center';
-    const lw = ctx.measureText(a.name).width + 14;
-    ctx.fillStyle = a.id === selected ? 'rgba(230,176,85,0.92)' : 'rgba(0,0,0,0.6)';
-    roundRect(hx - lw/2, a.y*S + 4, lw, 18, 9); ctx.fill();
-    ctx.fillStyle = a.id === selected ? '#1e1408' : '#efe6d5';
-    ctx.fillText(a.name, hx, a.y*S + 17); ctx.textAlign = 'left';
-    // bubble
-    const text = a.thinking ? '·'.repeat(1+Math.floor(now/380)%3)
-               : (a.bubble && now < a.bubbleUntil ? a.bubble : null);
-    if (text) drawBubble(hx, headY - 6, text, placed);
-  }
-  ctx.fillStyle = tintFor(clockPhase); ctx.fillRect(0, 0, cv.width, cv.height);
-  if (worldPaused) { ctx.fillStyle = 'rgba(30,8,8,0.28)'; ctx.fillRect(0,0,cv.width,cv.height); }
+  const list=[...actors.values()].sort((p,q)=>p.y-q.y);
+  for(const a of list) drawActor(a,now);
+  const placed=[];
+  for(const a of list){ const box=actorBox(a);
+    const text=a.thinking?'·'.repeat(1+Math.floor(now/380)%3):(a.bubble&&now<a.bubbleUntil?a.bubble:null);
+    if(text) drawBubble(box.cx, box.top-6, text, placed); }
+  ctx.fillStyle=tintFor(clockPhase); ctx.fillRect(0,0,W,H);
+  if(worldPaused){ ctx.fillStyle='rgba(30,8,8,0.28)'; ctx.fillRect(0,0,W,H); }
   requestAnimationFrame(frame);
 }
-function tintFor(p) { return ({ night:'rgba(12,18,50,0.22)', 'small hours':'rgba(6,10,40,0.28)',
-  evening:'rgba(50,25,60,0.10)', morning:'rgba(255,236,180,0.04)',
-  afternoon:'rgba(255,210,140,0.04)', midday:'rgba(0,0,0,0)' }[p] ?? 'rgba(50,25,60,0.10)'); }
-
-/* ---- bubbles (full-res, crisp text) ---- */
-function drawBubble(cx, bottomY, text, placed) {
-  ctx.font = '15px "Segoe UI", system-ui, sans-serif';
-  const words = text.split(' '), lines = ['']; const maxW = 250;
-  for (const w of words) { const t = lines[lines.length-1] ? lines[lines.length-1]+' '+w : w;
-    if (ctx.measureText(t).width > maxW && lines[lines.length-1]) lines.push(w);
-    else lines[lines.length-1] = t; }
-  const bw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 24;
-  const bh = lines.length*20 + 18;
-  let bx = Math.max(8, Math.min(cv.width - bw - 8, cx - bw/2));
-  let by = bottomY - bh;
-  let guard = 0;
-  const hit = r => placed.some(p => !(r.x+r.w<p.x||p.x+p.w<r.x||r.y+r.h<p.y||p.y+p.h<r.y));
-  let rect = { x:bx, y:Math.max(8,by), w:bw, h:bh };
-  while (hit(rect) && guard++ < 20 && rect.y > 8) rect.y -= 14;
-  rect.y = Math.max(8, rect.y); placed.push(rect); bx = rect.x; by = rect.y;
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
-  const gr = ctx.createLinearGradient(0, by, 0, by+bh);
-  gr.addColorStop(0, 'rgba(252,247,235,0.98)'); gr.addColorStop(1, 'rgba(244,236,220,0.98)');
-  ctx.fillStyle = gr; roundRect(bx, by, bw, bh, 13); ctx.fill(); ctx.restore();
-  ctx.fillStyle = 'rgba(248,241,227,0.98)';
-  const tx = Math.max(bx+16, Math.min(bx+bw-16, cx));
-  ctx.beginPath(); ctx.moveTo(tx-8, by+bh-1); ctx.lineTo(tx+8, by+bh-1);
-  ctx.lineTo(tx, by+bh+12); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#2a2016'; ctx.font = '15px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
-  lines.forEach((l, i) => ctx.fillText(l, bx+12, by+24+i*20));
+function actorBox(a){ const s=depth(a.y), h=FR*s, w=FR*s;
+  return {cx:a.x, top:a.y-h+10*s, w, h, x:a.x-w/2, y:a.y-h}; }
+function drawActor(a,now){
+  const s=depth(a.y), box=actorBox(a);
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(a.x,a.y,16*s*0.6,5*s,0,0,7); ctx.fill();
+  // selection/hover glow
+  if(a.id===selected||a.id===hovered){ ctx.save(); ctx.shadowColor=a.id===selected?'#e6b055':'#fff';
+    ctx.shadowBlur=18; }
+  if(a.img){ const col=a.moving?(1+Math.floor(a.anim/90)%8):0; const row=ROWS[a.dir]||2;
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(a.img, col*FR,row*FR,FR,FR, Math.round(box.x),Math.round(box.y), Math.round(box.w),Math.round(box.h)); }
+  if(a.id===selected||a.id===hovered) ctx.restore();
+  // name plate
+  ctx.font='600 12px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='center';
+  const lw=ctx.measureText(a.name).width+14;
+  ctx.fillStyle=a.id===selected?'rgba(230,176,85,0.92)':'rgba(0,0,0,0.6)';
+  rr(a.x-lw/2,a.y+2,lw,18,9); ctx.fill();
+  ctx.fillStyle=a.id===selected?'#1e1408':'#efe6d5'; ctx.fillText(a.name,a.x,a.y+15); ctx.textAlign='left';
 }
-function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r, y);
-  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function tintFor(p){ return ({night:'rgba(12,18,50,0.20)','small hours':'rgba(6,10,40,0.26)',
+  evening:'rgba(50,25,60,0.10)',morning:'rgba(255,236,180,0.04)',afternoon:'rgba(255,210,140,0.04)',
+  midday:'rgba(0,0,0,0)'}[p]??'rgba(50,25,60,0.10)'); }
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+
+function drawBubble(cx,bottomY,text,placed){
+  ctx.font='15px "Segoe UI",system-ui,sans-serif';
+  const words=text.split(' '),lines=['']; const maxW=250;
+  for(const w of words){ const t=lines[lines.length-1]?lines[lines.length-1]+' '+w:w;
+    if(ctx.measureText(t).width>maxW&&lines[lines.length-1]) lines.push(w); else lines[lines.length-1]=t; }
+  const bw=Math.min(maxW,Math.max(...lines.map(l=>ctx.measureText(l).width)))+24, bh=lines.length*20+18;
+  let bx=Math.max(8,Math.min(W-bw-8,cx-bw/2)), by=bottomY-bh, guard=0;
+  const hit=r=>placed.some(p=>!(r.x+r.w<p.x||p.x+p.w<r.x||r.y+r.h<p.y||p.y+p.h<r.y));
+  let rect={x:bx,y:Math.max(8,by),w:bw,h:bh};
+  while(hit(rect)&&guard++<20&&rect.y>8) rect.y-=14; rect.y=Math.max(8,rect.y); placed.push(rect); bx=rect.x; by=rect.y;
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=16; ctx.shadowOffsetY=4;
+  const gr=ctx.createLinearGradient(0,by,0,by+bh); gr.addColorStop(0,'rgba(252,247,235,0.98)'); gr.addColorStop(1,'rgba(244,236,220,0.98)');
+  ctx.fillStyle=gr; rr(bx,by,bw,bh,13); ctx.fill(); ctx.restore();
+  ctx.fillStyle='rgba(248,241,227,0.98)'; const tx=Math.max(bx+16,Math.min(bx+bw-16,cx));
+  ctx.beginPath(); ctx.moveTo(tx-8,by+bh-1); ctx.lineTo(tx+8,by+bh-1); ctx.lineTo(tx,by+bh+12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#2a2016'; ctx.font='15px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='left';
+  lines.forEach((l,i)=>ctx.fillText(l,bx+12,by+24+i*20));
+}
 
 /* ---- picking ---- */
-function actorAt(ev) {
-  const r = cv.getBoundingClientRect();
-  const mx = (ev.clientX-r.left)*cv.width/r.width, my = (ev.clientY-r.top)*cv.height/r.height;
-  let best=null, bestZ=-1;
-  for (const a of actors.values()) {
-    if (a.id === 'you') continue;
-    const sc = figScale(a.y), x = a.x*S, y = a.y*S;
-    if (mx>=x-11*sc*S && mx<=x+11*sc*S && my>=y-48*sc*S && my<=y+4*S && a.y>bestZ)
-      { best=a; bestZ=a.y; }
-  }
-  return best;
-}
-cv.addEventListener('mousemove', ev => { const a = actorAt(ev);
-  hovered = a?a.id:null; cv.style.cursor = a?'pointer':'default'; });
-cv.addEventListener('click', ev => { const a = actorAt(ev); if (!a) return;
-  selected = a.id; $('target').textContent = a.name; $('hint').style.display='none';
-  ($('name').value.trim() ? $('msg') : $('name')).focus(); });
+function actorAt(ev){ const r=cv.getBoundingClientRect();
+  const mx=(ev.clientX-r.left)*W/r.width, my=(ev.clientY-r.top)*H/r.height;
+  let best=null,bz=-1;
+  for(const a of actors.values()){ if(a.id==='you') continue; const b=actorBox(a);
+    if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h&&a.y>bz){best=a;bz=a.y;} }
+  return best; }
+cv.addEventListener('mousemove',ev=>{ const a=actorAt(ev); hovered=a?a.id:null; cv.style.cursor=a?'pointer':'default'; });
+cv.addEventListener('click',ev=>{ const a=actorAt(ev); if(!a) return; selectActor(a); });
+function selectActor(a){ selected=a.id; $('target').textContent=a.name; $('hint').style.display='none';
+  const p=portraits[a.id]; if(p){ $('portrait').src=p.src; $('portrait').style.display='block'; }
+  else $('portrait').style.display='none';
+  ($('name').value.trim()?$('msg'):$('name')).focus(); }
 
 /* ---- world state ---- */
-async function loadRoom() {
-  let r; try { r = await (await fetch('/gateway/room')).json(); }
-  catch { $('worldmeta').textContent = 'offline'; return; }
-  $('cafe').textContent = r.cafe; clockPhase = r.clock_time; worldPaused = r.paused;
-  $('statusdot').className = 'dot' + (r.paused ? ' paused' : '');
-  $('worldmeta').textContent = `tick ${r.tick} · ${r.clock_time} · ${r.weather}` +
-    (r.paused ? ' · paused' : '');
-  if (r.paused) { $('banner').textContent='The world is paused';
-    $('banner').classList.add('alert'); $('banner').style.display='block'; }
-  else if ($('banner').classList.contains('alert')) {
-    $('banner').style.display='none'; $('banner').classList.remove('alert'); }
-  const ids = new Set(r.occupants.map(o=>o.id));
-  for (const id of [...actors.keys()]) if (!ids.has(id) && id!=='you') actors.delete(id);
+async function loadRoom(){
+  let r; try{ r=await (await fetch('/gateway/room')).json(); }catch{ $('worldmeta').textContent='offline'; return; }
+  $('cafe').textContent=r.cafe; clockPhase=r.clock_time; worldPaused=r.paused;
+  $('statusdot').className='dot'+(r.paused?' paused':'');
+  $('worldmeta').textContent=`tick ${r.tick} · ${r.clock_time} · ${r.weather}`+(r.paused?' · paused':'');
+  if(r.paused){ $('banner').textContent='The world is paused'; $('banner').classList.add('alert'); $('banner').style.display='block'; }
+  else if($('banner').classList.contains('alert')){ $('banner').style.display='none'; $('banner').classList.remove('alert'); }
+  const ids=new Set(r.occupants.map(o=>o.id));
+  for(const id of [...actors.keys()]) if(!ids.has(id)&&id!=='you') actors.delete(id);
   relayout(r.occupants);
-  $('ejectsel').innerHTML = r.occupants.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
+  $('ejectsel').innerHTML=r.occupants.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
 }
 
 /* ---- SSE ---- */
-function startFeed() {
-  const es = new EventSource('/gateway/events');
-  es.onmessage = ev => { const e = JSON.parse(ev.data);
-    if (e.tool==='say') say(e.actor, e.text);
-    else if (e.tool==='emote') say(e.actor, e.text, true);
-    else if (e.tool==='event_seed') banner(e.text);
-    else if (e.tool==='eject') actors.delete(e.actor);
-    const d = document.createElement('div');
-    d.innerHTML = `<span class="tk">t${e.tick}</span> <span class="actor">${e.actor}</span> `
-      + (e.text || `<em>${e.tool}</em>`);
-    $('feed').prepend(d); while ($('feed').children.length>50) $('feed').lastChild.remove(); };
-}
-let bannerTimer;
-function banner(text) { if (worldPaused) return;
-  $('banner').textContent = text; $('banner').style.display='block';
-  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => {
-    if (!$('banner').classList.contains('alert')) $('banner').style.display='none'; }, 12000); }
+function startFeed(){ const es=new EventSource('/gateway/events');
+  es.onmessage=ev=>{ const e=JSON.parse(ev.data);
+    if(e.tool==='say') say(e.actor,e.text); else if(e.tool==='emote') say(e.actor,e.text,true);
+    else if(e.tool==='event_seed') banner(e.text); else if(e.tool==='eject') actors.delete(e.actor);
+    const d=document.createElement('div'); d.innerHTML=`<span class="tk">t${e.tick}</span> <span class="actor">${e.actor}</span> `+(e.text||`<em>${e.tool}</em>`);
+    $('feed').prepend(d); while($('feed').children.length>50) $('feed').lastChild.remove(); }; }
+let bannerTimer; function banner(text){ if(worldPaused) return; $('banner').textContent=text; $('banner').style.display='block';
+  clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>{ if(!$('banner').classList.contains('alert')) $('banner').style.display='none'; },12000); }
 
 /* ---- chat ---- */
-function bubbleMsg(cls, who, text) {
-  const d = document.createElement('div'); d.className = 'msg '+cls;
-  d.innerHTML = `<div class="who">${who}</div>`;
-  const b = document.createElement('div'); b.textContent = text; d.appendChild(b);
-  $('chatlog').appendChild(d); $('chatlog').scrollTop = $('chatlog').scrollHeight; return b;
-}
-async function send() {
-  const name = $('name').value.trim(), text = $('msg').value.trim();
-  if (!name) return $('name').focus(); if (!text) return $('msg').focus();
-  if (!selected) { bubbleMsg('npc pending','system','Click a figure in the café first.'); return; }
-  localStorage.setItem('interval-name', name);
-  const npc = actors.get(selected), npcName = npc?.name || selected;
-  // place YOU beside them, walking in
-  let you = actors.get('you');
-  if (!you) { const [x,y] = [BW*0.5, 196];
-    you = { id:'you', name, def:FIG.visitor, x, y, tx:x, ty:y, facing:1, phase:0,
-            moving:false, queue:[], bubble:null, bubbleUntil:0, thinking:false };
-    actors.set('you', you); }
-  you.name = name;
-  if (npc) { const side = npc.x < BW/2 ? 1 : -1;
-             you.tx = npc.x + side*26; you.ty = npc.y + 2; }
-  say('you', text); bubbleMsg('me', name, text);
-  $('msg').value=''; $('send').disabled = true;
-  const pend = bubbleMsg('npc pending', npcName, '…'); if (npc) npc.thinking = true;
-  try {
-    const res = await fetch('/gateway/chat', { method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({display_name:name, target:selected, text}) });
-    const data = await res.json();
-    const reply = res.ok ? data.reply : (data.detail || 'no answer');
-    pend.parentElement.classList.remove('pending'); pend.textContent = reply; say(selected, reply);
-  } catch(e) { pend.textContent = 'the café did not answer — ' + e; }
-  if (npc) npc.thinking = false; $('send').disabled = false; $('msg').focus();
-}
-$('send').onclick = send;
-$('msg').addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }});
-$('name').addEventListener('keydown', e => { if (e.key==='Enter') $('msg').focus(); });
+function bubbleMsg(cls,who,text){ const d=document.createElement('div'); d.className='msg '+cls;
+  d.innerHTML=`<div class="who2">${who}</div>`; const b=document.createElement('div'); b.textContent=text; d.appendChild(b);
+  $('chatlog').appendChild(d); $('chatlog').scrollTop=$('chatlog').scrollHeight; return b; }
+async function send(){ const name=$('name').value.trim(), text=$('msg').value.trim();
+  if(!name) return $('name').focus(); if(!text) return $('msg').focus();
+  if(!selected){ bubbleMsg('npc pending','system','Click a figure in the café first.'); return; }
+  localStorage.setItem('interval-name',name);
+  const npc=actors.get(selected), npcName=npc?.name||selected;
+  bubbleMsg('me',name,text); $('msg').value=''; $('send').disabled=true;
+  const pend=bubbleMsg('npc pending',npcName,'…'); if(npc) npc.thinking=true;
+  try{ const res=await fetch('/gateway/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({display_name:name,target:selected,text})}); const data=await res.json();
+    const reply=res.ok?data.reply:(data.detail||'no answer');
+    pend.parentElement.classList.remove('pending'); pend.textContent=reply; say(selected,reply);
+  }catch(e){ pend.textContent='the café did not answer — '+e; }
+  if(npc) npc.thinking=false; $('send').disabled=false; $('msg').focus(); }
+$('send').onclick=send;
+$('msg').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
+$('name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('msg').focus(); });
 
 /* ---- operator ---- */
-async function op(kind, arg) {
-  const token = $('admintoken').value.trim();
-  if (!token) { $('opstatus').textContent='admin token required'; return; }
-  const headers = {'Authorization':'Bearer '+token,'Content-Type':'application/json'};
-  const res = kind==='pause'
-    ? await fetch('/admin/pause',{method:'POST',headers,body:JSON.stringify({paused:arg})})
-    : await fetch('/admin/eject/'+$('ejectsel').value,{method:'POST',headers});
-  $('opstatus').textContent = res.ok ? `${kind} ok` : `${kind} failed (${res.status})`; loadRoom();
-}
+async function op(kind,arg){ const token=$('admintoken').value.trim();
+  if(!token){ $('opstatus').textContent='admin token required'; return; }
+  const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+  const res=kind==='pause'?await fetch('/admin/pause',{method:'POST',headers,body:JSON.stringify({paused:arg})})
+    :await fetch('/admin/eject/'+$('ejectsel').value,{method:'POST',headers});
+  $('opstatus').textContent=res.ok?`${kind} ok`:`${kind} failed (${res.status})`; loadRoom(); }
 
 /* ---- boot ---- */
-loadRoom(); startFeed(); setInterval(loadRoom, 6000); requestAnimationFrame(frame);
+(async()=>{
+  for(const k of [...KNOWN,'visitor']){ sprites[k]=await loadImg(`/assets/sprites/${k}.png`); portraits[k]=await loadImg(`/assets/${k}.png`); }
+  await loadRoom(); startFeed(); setInterval(loadRoom,6000); requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
