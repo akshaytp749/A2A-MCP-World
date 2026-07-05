@@ -28,45 +28,45 @@ EYES = "eyes/human/adult/neutral/walk.png"
 
 # (layer path, tint rgb | None). Order = back to front.
 CHARS = {
+    # Old philosophers: bald + beard = a clean, fully-visible face (no hair
+    # covering it). Others: short neat hair that sits above the eyes.
     "socrates": [
         (BODY, None), (EYES, None),
         ("torso/clothes/robe/female/walk/light_gray.png", (222, 214, 191)),   # cream toga
-        ("hair/balding/adult/walk.png", (214, 210, 200)),                     # grey side hair
-        ("beards/beard/basic/walk.png", (224, 219, 206)),                     # white beard
+        ("beards/beard/basic/walk.png", (224, 219, 206)),                     # white beard, bald
     ],
     "twain": [
         (BODY, None), (EYES, None),
         ("legs/pants/male/walk/gray.png", (224, 216, 198)),                   # cream trousers
         ("torso/clothes/longsleeve/formal/male/walk/white.png", (233, 226, 208)),  # cream suit
-        ("hair/messy2/adult/walk.png", (236, 232, 224)),                      # white mane
+        ("hair/high_and_tight/adult/walk.png", (236, 232, 224)),              # neat white hair
         ("beards/mustache/walrus/walk.png", (236, 232, 224)),                 # white 'stache
     ],
     "tesla": [
         (BODY, None), (EYES, None),
         ("legs/pants/male/walk/black.png", (34, 31, 29)),
         ("torso/clothes/longsleeve/formal/male/walk/white.png", (40, 36, 33)),     # black suit
-        ("hair/plain/adult/walk.png", (44, 34, 27)),                          # dark hair
+        ("hair/high_and_tight/adult/walk.png", (44, 34, 27)),                 # neat dark hair
         ("beards/mustache/chevron/walk.png", (40, 32, 26)),                   # thin dark 'stache
     ],
     "darwin": [
         (BODY, None), (EYES, None),
         ("legs/pants/male/walk/charcoal.png", None),
         ("torso/clothes/longsleeve/formal/male/walk/white.png", (74, 58, 42)),     # dark coat
-        ("hair/balding/adult/walk.png", (228, 224, 216)),                     # white side hair
-        ("beards/beard/medium/walk.png", (230, 225, 216)),                    # big white beard
+        ("beards/beard/medium/walk.png", (230, 225, 216)),                    # big white beard, bald
     ],
     "ramanujan": [
         (BODY, (156, 100, 62)),                                              # brown skin
         (EYES, None),
         ("legs/pants/male/walk/gray.png", (231, 224, 208)),                   # white dhoti
         ("torso/clothes/longsleeve/longsleeve/male/walk.png", (228, 219, 199)),  # cream kurta
-        ("hair/plain/adult/walk.png", (28, 22, 18)),                          # dark hair
+        ("hair/high_and_tight/adult/walk.png", (28, 22, 18)),                 # short dark hair
     ],
     "visitor": [
         (BODY, None), (EYES, None),
         ("legs/pants/male/walk/navy.png", None),
         ("torso/clothes/longsleeve/formal/male/walk/white.png", (58, 78, 112)),    # navy coat
-        ("hair/messy1/adult/walk.png", (92, 64, 42)),                         # brown hair
+        ("hair/high_and_tight/adult/walk.png", (92, 64, 42)),                 # short brown hair
     ],
 }
 

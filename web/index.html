@@ -40,9 +40,10 @@
   #feed .tk { color:#6b5c47; }
   .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px;
            padding:16px; display:flex; flex-direction:column; box-shadow:0 8px 30px #0006; }
-  #who { display:flex; gap:12px; align-items:center; margin-bottom:12px; min-height:76px; }
-  #portrait { width:72px; height:72px; border-radius:12px; object-fit:cover; object-position:top;
-              border:2px solid var(--line); background:var(--panel2); flex:none; display:none; }
+  #who { display:flex; gap:14px; align-items:center; margin-bottom:12px; min-height:104px; }
+  #portrait { width:100px; height:100px; border-radius:12px; object-fit:cover; object-position:top;
+              border:2px solid var(--accent); background:var(--panel2); flex:none; display:none;
+              box-shadow:0 4px 16px #0007; }
   #who h2 { font-size:12px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
   #who .nm { font-size:18px; color:var(--accent); font-family:Georgia, serif; margin-top:2px; }
   #chatlog { flex:1; overflow-y:auto; min-height:32vh; max-height:50vh; margin-bottom:10px;
@@ -286,7 +287,12 @@ function actorAt(ev){ const r=cv.getBoundingClientRect();
   for(const a of actors.values()){ if(a.id==='you') continue; const b=actorBox(a);
     if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h&&a.y>bz){best=a;bz=a.y;} }
   return best; }
-cv.addEventListener('mousemove',ev=>{ const a=actorAt(ev); hovered=a?a.id:null; cv.style.cursor=a?'pointer':'default'; });
+cv.addEventListener('mousemove',ev=>{ const a=actorAt(ev); hovered=a?a.id:null; cv.style.cursor=a?'pointer':'default';
+  // preview the real face on hover (unless you've committed to someone)
+  if(a && a.id!==selected){ const p=portraits[a.id]; if(p){ $('portrait').src=p.src; $('portrait').style.display='block'; $('target').textContent=a.name; } }
+  else if(!a && !selected){ $('portrait').style.display='none'; $('target').textContent='— pick someone'; }
+  else if(!a && selected){ const p=portraits[selected]; if(p){ $('portrait').src=p.src; } $('target').textContent=actors.get(selected)?.name||selected; }
+});
 cv.addEventListener('click',ev=>{ const a=actorAt(ev); if(!a) return; selectActor(a); });
 function selectActor(a){ selected=a.id; $('target').textContent=a.name; $('hint').style.display='none';
   const p=portraits[a.id]; if(p){ $('portrait').src=p.src; $('portrait').style.display='block'; }
