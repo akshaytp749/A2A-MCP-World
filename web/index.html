@@ -4,359 +4,313 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Interval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0e0b08; --panel:#1b1510; --panel2:#241d15; --line:#3a2c1e;
-          --ink:#efe6d5; --dim:#a89a82; --accent:#e6b055; }
-  * { box-sizing:border-box; margin:0; }
-  body { background:radial-gradient(1200px 700px at 50% -10%, #241a12, var(--bg));
-         color:var(--ink); font:15px/1.55 'Segoe UI', system-ui, sans-serif;
-         min-height:100vh; display:flex; flex-direction:column; }
-  header { padding:12px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;
-           border-bottom:1px solid var(--line); }
-  header h1 { font-size:20px; font-weight:600; letter-spacing:3px;
-              color:var(--accent); font-family:Georgia, serif; }
-  .meta { color:var(--dim); font-size:13px; margin-left:auto; }
-  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#6fae5a;
-         margin-right:5px; box-shadow:0 0 6px #6fae5a; }
-  .dot.paused { background:#d0694f; box-shadow:0 0 6px #d0694f; }
-  main { flex:1; display:grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
-         gap:16px; padding:16px 20px; max-width:1460px; width:100%; margin:0 auto; }
-  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
-  #stage { position:relative; width:100%; border-radius:14px; overflow:hidden;
-           box-shadow:0 20px 60px #000a, inset 0 0 0 1px #ffffff10; line-height:0; }
-  canvas { width:100%; display:block; background:#161009;
-           image-rendering:pixelated; image-rendering:crisp-edges; }
-  #banner { position:absolute; top:14px; left:50%; transform:translateX(-50%);
-            background:#000000cc; color:var(--accent); padding:8px 18px; font-size:13px;
-            border:1px solid #e6b05566; border-radius:20px; display:none;
-            max-width:88%; text-align:center; line-height:1.4; }
-  #banner.alert { color:#f0937c; border-color:#f0937c66; }
-  #hint { position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
-          color:#efe6d5cc; font-size:12px; background:#00000088; padding:5px 14px;
-          border-radius:20px; pointer-events:none; }
-  #feed { margin-top:10px; max-height:15vh; overflow-y:auto; font-size:12px; color:var(--dim);
-          background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
-  #feed .actor { color:var(--accent); font-weight:600; }
-  #feed .tk { color:#6b5c47; }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px;
-           padding:16px; display:flex; flex-direction:column; box-shadow:0 8px 30px #0006; }
-  #who { display:flex; gap:14px; align-items:center; margin-bottom:12px; min-height:104px; }
-  #portrait { width:100px; height:100px; border-radius:12px; object-fit:cover; object-position:top;
-              border:2px solid var(--accent); background:var(--panel2); flex:none; display:none;
-              box-shadow:0 4px 16px #0007; }
-  #who h2 { font-size:12px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
-  #who .nm { font-size:18px; color:var(--accent); font-family:Georgia, serif; margin-top:2px; }
-  #chatlog { flex:1; overflow-y:auto; min-height:32vh; max-height:50vh; margin-bottom:10px;
-             display:flex; flex-direction:column; gap:8px; padding-right:4px; }
-  .msg { padding:9px 13px; border-radius:14px; max-width:90%; font-size:14px; line-height:1.5;
-         animation:pop .18s ease; }
-  .msg.me { align-self:flex-end; background:linear-gradient(180deg,#33421f,#2a3a1c);
-            border:1px solid #47612f; color:#dcefcb; border-bottom-right-radius:4px; }
-  .msg.npc { align-self:flex-start; background:var(--panel2); border:1px solid var(--line);
-             border-bottom-left-radius:4px; }
-  .msg .who2 { font-size:11px; color:var(--dim); margin-bottom:2px; font-weight:600; }
-  .msg.pending { color:var(--dim); font-style:italic; }
-  @keyframes pop { from{opacity:0; transform:translateY(6px);} to{opacity:1;} }
-  input, select, button, textarea { background:var(--panel2); color:var(--ink);
-      border:1px solid var(--line); border-radius:10px; padding:10px 12px; font:inherit; }
-  input:focus, textarea:focus { outline:none; border-color:var(--accent); }
-  button { cursor:pointer; background:linear-gradient(180deg,#4a3922,#3a2c1c); font-weight:600; }
-  button:hover { background:linear-gradient(180deg,#5a4529,#463521); }
-  button:disabled { opacity:.5; cursor:wait; }
-  .row { display:flex; gap:8px; margin-top:8px; }
-  .row input[type=text], .row textarea { flex:1; min-width:0; }
-  #msg { resize:none; height:44px; }
-  footer { padding:10px 20px; color:var(--dim); font-size:11px; border-top:1px solid var(--line);
-           text-align:center; }
-  details { margin-top:12px; color:var(--dim); font-size:13px; } summary { cursor:pointer; }
-  #opstatus { margin-top:6px; font-size:12px; min-height:16px; }
+  :root{
+    --bg:#0c0a09; --ink:#f2ece1; --dim:#a89e8d; --faint:#6d6355;
+    --gold:#e7b768; --gold-soft:#c99a4e; --green:#8fbf7a; --red:#e0836a;
+    --glass:rgba(28,23,18,.62); --glass-line:rgba(231,183,104,.16);
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:15px;line-height:1.55;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+  /* ---- atmospheric backdrop ---- */
+  #bg{position:fixed;inset:0;z-index:-2;background:#0c0a09 center/cover no-repeat}
+  #bg.loaded{background-image:url('/assets/cafe.jpg')}
+  #bg::after{content:'';position:absolute;inset:0;
+    background:radial-gradient(120% 90% at 50% 30%, rgba(12,10,9,.35), rgba(12,10,9,.86) 78%),
+               linear-gradient(180deg, rgba(12,10,9,.5), rgba(12,10,9,.75));
+    backdrop-filter:saturate(1.05)}
+  #grain{position:fixed;inset:0;z-index:-1;opacity:.5;pointer-events:none;
+    background:radial-gradient(circle at 50% 0%, rgba(231,183,104,.05), transparent 60%)}
+
+  /* ---- layout ---- */
+  .app{height:100%;display:grid;grid-template-columns:1fr 400px;grid-template-rows:auto 1fr auto}
+  header{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:20px 28px}
+  header .brand{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:.5px;
+    color:var(--ink);text-shadow:0 2px 20px rgba(0,0,0,.6)}
+  header .tag{font-size:12.5px;color:var(--dim);letter-spacing:.3px;margin-top:-2px}
+  header .status{margin-left:auto;display:flex;gap:8px}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:100px;
+    background:var(--glass);border:1px solid var(--glass-line);font-size:12.5px;color:var(--dim);
+    backdrop-filter:blur(12px)}
+  .pill b{color:var(--ink);font-weight:500}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.paused{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+  /* ---- stage with character portraits ---- */
+  #stage{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+  .avatar{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:9px;
+    transition:transform .55s cubic-bezier(.22,1,.36,1);animation:float 7s ease-in-out infinite}
+  @keyframes float{0%,100%{translate:0 0}50%{translate:0 -9px}}
+  .avatar .ring{position:relative;width:112px;height:112px;border-radius:50%;padding:3px;
+    background:linear-gradient(160deg, rgba(231,183,104,.55), rgba(231,183,104,.08));
+    box-shadow:0 10px 34px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.05);
+    transition:box-shadow .4s, transform .4s}
+  .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 22%;
+    display:block;background:#1a1512}
+  .avatar .nm{font-family:var(--serif);font-size:15px;color:var(--ink);letter-spacing:.3px;
+    padding:3px 12px;border-radius:100px;background:rgba(12,10,9,.55);border:1px solid var(--glass-line);
+    backdrop-filter:blur(8px);white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+  .avatar:hover{transform:translate(-50%,-50%) scale(1.05);animation-play-state:paused}
+  .avatar:hover .ring{box-shadow:0 14px 40px rgba(0,0,0,.6), 0 0 0 2px rgba(231,183,104,.4)}
+  .avatar.sel .ring{box-shadow:0 14px 44px rgba(0,0,0,.6), 0 0 0 3px var(--gold),
+    0 0 28px rgba(231,183,104,.5)}
+  .avatar.sel .nm{color:var(--gold)}
+  .avatar.speaking .ring{animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 2px rgba(143,191,122,.5)}
+    50%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 4px rgba(143,191,122,.85), 0 0 30px rgba(143,191,122,.5)}}
+  /* speech bubble */
+  .bubble{position:absolute;bottom:128px;left:50%;transform:translateX(-50%);
+    width:max-content;max-width:280px;padding:12px 15px;border-radius:16px;
+    background:rgba(245,240,228,.97);color:#2a2016;font-size:13.5px;line-height:1.5;
+    box-shadow:0 16px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+    transition:opacity .35s, transform .35s;transform-origin:bottom center}
+  .bubble.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  .bubble::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+    border:9px solid transparent;border-top-color:rgba(245,240,228,.97);border-bottom:0}
+  .bubble.emote{font-style:italic;background:rgba(231,183,104,.94);color:#2a2016}
+  .bubble.emote::after{border-top-color:rgba(231,183,104,.94)}
+
+  #seed{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:5;
+    padding:9px 18px;border-radius:100px;background:var(--glass);border:1px solid var(--glass-line);
+    color:var(--gold);font-size:13px;backdrop-filter:blur(14px);opacity:0;
+    transition:opacity .5s;max-width:80%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #seed.show{opacity:1}
+
+  #murmurs{grid-column:1;grid-row:3;padding:12px 28px;display:flex;gap:10px;align-items:center;
+    font-size:12.5px;color:var(--faint);overflow:hidden;white-space:nowrap}
+  #murmurs .m{color:var(--dim)} #murmurs .a{color:var(--gold-soft)}
+
+  /* ---- conversation panel ---- */
+  aside{grid-column:2;grid-row:2/4;background:var(--glass);border-left:1px solid var(--glass-line);
+    backdrop-filter:blur(22px);display:flex;flex-direction:column;overflow:hidden}
+  .conv-empty{margin:auto;text-align:center;color:var(--dim);padding:40px;max-width:280px}
+  .conv-empty .big{font-family:var(--serif);font-size:20px;color:var(--ink);margin-bottom:8px}
+  #conv{flex:1;display:none;flex-direction:column;min-height:0}
+  .conv-head{display:flex;gap:14px;align-items:center;padding:22px 22px 18px;
+    border-bottom:1px solid var(--glass-line)}
+  .conv-head img{width:64px;height:64px;border-radius:16px;object-fit:cover;object-position:50% 20%;
+    box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  .conv-head .nm{font-family:var(--serif);font-size:21px;color:var(--ink)}
+  .conv-head .era{font-size:12.5px;color:var(--dim);letter-spacing:.3px}
+  #log{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+  #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:#ffffff14;border-radius:8px}
+  .msg{max-width:88%;padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.55;
+    animation:rise .3s cubic-bezier(.22,1,.36,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+  .msg.me{align-self:flex-end;background:linear-gradient(180deg,#3a4d2b,#31411f);color:#e7f2da;
+    border-bottom-right-radius:5px}
+  .msg.npc{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--glass-line);
+    border-bottom-left-radius:5px}
+  .msg.npc .nm{font-family:var(--serif);font-size:12px;color:var(--gold-soft);margin-bottom:3px}
+  .msg.pending{color:var(--dim);font-style:italic}
+  .compose{padding:16px 18px 18px;border-top:1px solid var(--glass-line);display:flex;gap:10px}
+  .compose textarea{flex:1;resize:none;height:46px;background:rgba(255,255,255,.05);color:var(--ink);
+    border:1px solid var(--glass-line);border-radius:14px;padding:12px 14px;font:inherit}
+  .compose textarea:focus{outline:none;border-color:var(--gold-soft)}
+  .compose button{width:46px;border:0;border-radius:14px;cursor:pointer;color:#1a130a;
+    background:linear-gradient(180deg,var(--gold),var(--gold-soft));font-size:18px;transition:filter .2s}
+  .compose button:hover{filter:brightness(1.08)} .compose button:disabled{opacity:.5;cursor:wait}
+  .name-row{padding:0 18px 12px} .name-row input{width:100%;background:rgba(255,255,255,.05);
+    color:var(--ink);border:1px solid var(--glass-line);border-radius:12px;padding:10px 13px;font:inherit}
+  .name-row input:focus{outline:none;border-color:var(--gold-soft)}
+
+  footer{grid-column:1/3;grid-row:4;padding:9px 28px;font-size:11px;color:var(--faint);
+    display:flex;align-items:center;gap:16px;border-top:1px solid rgba(255,255,255,.04)}
+  footer .disc{margin-right:auto}
+  footer a,footer .op{color:var(--faint);cursor:pointer;text-decoration:none}
+  footer .op:hover{color:var(--dim)}
+  dialog{background:var(--glass);color:var(--ink);border:1px solid var(--glass-line);border-radius:16px;
+    backdrop-filter:blur(22px);padding:20px;max-width:340px}
+  dialog::backdrop{background:rgba(0,0,0,.55)}
+  dialog input,dialog button,dialog select{width:100%;margin-top:8px;padding:10px 12px;border-radius:10px;
+    background:rgba(255,255,255,.05);color:var(--ink);border:1px solid var(--glass-line);font:inherit}
+  dialog button{cursor:pointer;background:rgba(231,183,104,.18)}
+  @media(max-width:860px){.app{grid-template-columns:1fr}aside{grid-column:1;grid-row:auto;
+    max-height:44vh;border-left:0;border-top:1px solid var(--glass-line)}
+    #stage{grid-row:2;min-height:44vh}#murmurs{display:none}}
 </style>
 </head>
 <body>
-<header>
-  <h1 id="cafe">The Interval</h1>
-  <span class="meta"><span class="dot" id="statusdot"></span><span id="worldmeta">connecting…</span></span>
-</header>
-<main>
-  <section id="left">
-    <div id="stage">
-      <canvas id="scene" width="1024" height="576"></canvas>
-      <div id="banner"></div>
-      <div id="hint">click a figure to speak with them</div>
+<div id="bg"></div><div id="grain"></div>
+<div class="app">
+  <header>
+    <div>
+      <div class="brand" id="cafe">The Interval</div>
+      <div class="tag">a café that exists between times</div>
     </div>
-    <div id="feed"></div>
-  </section>
-  <section class="panel">
-    <div id="who">
-      <img id="portrait" alt="">
-      <div><h2>Talking to</h2><div class="nm" id="target">— pick someone</div></div>
+    <div class="status">
+      <span class="pill"><span class="dot" id="dot"></span><span id="clock">…</span></span>
+      <span class="pill">tick <b id="tick">—</b></span>
     </div>
-    <div class="row"><input type="text" id="name" placeholder="Your name"></div>
-    <div id="chatlog"></div>
-    <div class="row">
-      <textarea id="msg" placeholder="Say something…"></textarea>
-      <button id="send">Send</button>
+  </header>
+
+  <div id="stage">
+    <div id="seed"></div>
+  </div>
+
+  <div id="murmurs"><span>the room is quiet…</span></div>
+
+  <aside>
+    <div class="conv-empty" id="empty">
+      <div class="big">Who will you speak with?</div>
+      <div>Choose a face. They remember you between visits, and the conversation
+           continues on its own even when you leave.</div>
     </div>
-    <details>
-      <summary>Operator</summary>
-      <div class="row">
-        <input type="password" id="admintoken" placeholder="admin token">
-        <button onclick="op('pause', true)">Pause</button>
-        <button onclick="op('pause', false)">Resume</button>
+    <div id="conv">
+      <div class="conv-head">
+        <img id="chead" alt="">
+        <div><div class="nm" id="cname"></div><div class="era" id="cera"></div></div>
       </div>
-      <div class="row">
-        <select id="ejectsel"></select><button onclick="op('eject')">Eject</button>
+      <div class="name-row"><input id="name" placeholder="Your name" autocomplete="off"></div>
+      <div id="log"></div>
+      <div class="compose">
+        <textarea id="msg" placeholder="Say something…"></textarea>
+        <button id="send" title="Send">↑</button>
       </div>
-      <div id="opstatus"></div>
-    </details>
-  </section>
-</main>
-<footer>Fictional AI portrayals of historical figures — not affiliated with their estates.</footer>
+    </div>
+  </aside>
+
+  <footer>
+    <span class="disc">Fictional AI portrayals of historical figures — not affiliated with their estates.</span>
+    <span class="op" id="opbtn">operator</span>
+  </footer>
+</div>
+
+<dialog id="opdlg">
+  <div style="font-family:var(--serif);font-size:16px">Operator</div>
+  <input id="admtok" type="password" placeholder="admin token">
+  <div style="display:flex;gap:8px">
+    <button onclick="op('pause',true)">Pause</button><button onclick="op('pause',false)">Resume</button>
+  </div>
+  <select id="ejectsel"></select><button onclick="op('eject')">Eject selected</button>
+  <div id="opstat" style="font-size:12px;color:var(--dim);margin-top:8px;min-height:14px"></div>
+  <button onclick="opdlg.close()" style="background:transparent">close</button>
+</dialog>
 
 <script>
 "use strict";
-const $ = id => document.getElementById(id);
-$('name').value = localStorage.getItem('interval-name') || '';
+const $=id=>document.getElementById(id);
+const ERAS={socrates:'Athens · 5th c. BCE',twain:'Missouri · 1835–1910',
+  tesla:'Smiljan · 1856–1943',darwin:'England · 1809–1882',ramanujan:'Madras · 1887–1920'};
+const SPOTS={chalkboard:[17,45],alcove:[31,37],'courtyard-door':[50,35],'window-table':[41,60],
+  rug:[56,61],'corner-table':[17,69],bar:[80,50]};
+const portraitURL=id=>`/assets/portraits/${id}.jpg`;
+$('name').value=localStorage.getItem('interval-name')||'';
 
-const cv = $('scene'), ctx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
-const KNOWN = ['socrates','twain','tesla','darwin','ramanujan'];
+let selected=null, avatars=new Map();
 
-/* ---- assets ---- */
-const sprites = {}, portraits = {};
-function loadImg(src){ return new Promise(r=>{ const i=new Image();
-  i.onload=()=>r(i); i.onerror=()=>r(null); i.src=src; }); }
+/* backdrop load */
+{ const im=new Image(); im.onload=()=>$('bg').classList.add('loaded'); im.src='/assets/cafe.jpg'; }
 
-/* LPC walk sheet: 9 cols x 4 rows of 64px. rows: 0 up,1 left,2 down,3 right.
-   col 0 = idle; cols 1..8 = walk cycle. */
-const FR = 64, ROWS = {up:0,left:1,down:2,right:3};
-
-/* ---- room (drawn as clean tiles) ---- */
-const TILE = 32;
-function paintRoom(t) {
-  // floor
-  for (let y=176; y<H; y+=TILE) for (let x=0; x<W; x+=TILE) {
-    const a = ((x/TILE + y/TILE) & 1);
-    ctx.fillStyle = a ? '#6b4a2a' : '#5f4326'; ctx.fillRect(x,y,TILE,TILE);
-    ctx.fillStyle = '#7a5732'; ctx.fillRect(x,y,TILE,2);
-    ctx.fillStyle = '#4a3420'; ctx.fillRect(x,y+TILE-2,TILE,2);
-    ctx.fillStyle = '#4a341f'; ctx.fillRect(x,y,2,TILE);
+/* ---- stage: character portraits ---- */
+function placeAvatars(occ){
+  const seen=new Set();
+  const bySpot={}; occ.forEach(o=>(bySpot[o.spot]=bySpot[o.spot]||[]).push(o));
+  for(const [spot,list] of Object.entries(bySpot)){
+    list.forEach((o,i)=>{
+      seen.add(o.id);
+      let a=avatars.get(o.id);
+      if(!a){
+        a=document.createElement('div'); a.className='avatar';
+        a.innerHTML=`<div class="bubble"></div><div class="ring"><img src="${portraitURL(o.id)}" alt="${o.name}"></div><div class="nm">${o.name}</div>`;
+        a.onclick=()=>select(o.id,o.name);
+        a.style.animationDelay=(Math.random()*4).toFixed(2)+'s';
+        $('stage').appendChild(a); avatars.set(o.id,{el:a,name:o.name});
+      }
+      const [bx,by]=SPOTS[spot]||SPOTS.bar;
+      const off=list.length>1?(i-(list.length-1)/2)*9:0;
+      a.style.left=(bx+off)+'%'; a.style.top=by+'%';
+    });
   }
-  // back wall
-  const wg = ctx.createLinearGradient(0,0,0,176); wg.addColorStop(0,'#3a2b1a'); wg.addColorStop(1,'#2c2013');
-  ctx.fillStyle = wg; ctx.fillRect(0,0,W,176);
-  for (let x=0; x<W; x+=TILE){ ctx.fillStyle='#241a10'; ctx.fillRect(x,0,1,176); }
-  ctx.fillStyle='#4a3722'; ctx.fillRect(0,150,W,6); ctx.fillStyle='#5a4530'; ctx.fillRect(0,168,W,8);
-  // chalkboard
-  ctx.fillStyle='#5a4530'; ctx.fillRect(40,26,232,110);
-  ctx.fillStyle='#15281f'; ctx.fillRect(48,34,216,94);
-  ctx.fillStyle='#a7d3ba'; ctx.font='15px monospace';
-  ['e^iπ + 1 = 0','Σ 1/n² = π²/6','∇·E = ρ/ε₀','π(x) ~ x/ln x'].forEach((s,i)=>ctx.fillText(s,58,58+i*22));
-  // courtyard window
-  ctx.fillStyle='#5a4530'; ctx.fillRect(430,24,150,120);
-  const sky=ctx.createLinearGradient(0,30,0,140); sky.addColorStop(0,'#0b1330'); sky.addColorStop(1,'#16224a');
-  ctx.fillStyle=sky; ctx.fillRect(438,32,134,104);
-  ctx.fillStyle='#e9e0cd';
-  [[460,50],[490,42],[520,66],[548,48],[476,96],[512,110],[556,92],[500,80]].forEach(([x,y])=>{
-    const tw=0.5+0.5*Math.sin(t/500+x); ctx.globalAlpha=0.5+0.5*tw; ctx.fillRect(x,y,2,2); });
-  ctx.globalAlpha=1; ctx.fillStyle='#5a4530'; ctx.fillRect(503,32,3,104); ctx.fillRect(438,82,134,3);
-  // bar + shelf (right)
-  ctx.fillStyle='#241a10'; ctx.fillRect(660,20,364,54);
-  ['#8a4630','#3f7a52','#a3823a','#5b83b8','#8a4630','#a3823a','#3f7a52','#7a4a8a','#8a4630'].forEach((c,i)=>{
-    ctx.fillStyle=c; ctx.fillRect(676+i*40,30,16,36); ctx.fillStyle='#ffffff33'; ctx.fillRect(678+i*40,32,3,30); });
-  const bg=ctx.createLinearGradient(0,150,0,210); bg.addColorStop(0,'#7a5433'); bg.addColorStop(1,'#583a20');
-  ctx.fillStyle=bg; ctx.fillRect(628,150,396,60); ctx.fillStyle='#8a6238'; ctx.fillRect(628,150,396,8);
-  ctx.fillStyle='#3d2914'; ctx.fillRect(628,204,396,6);
-  // rug
-  roundFill(300,360,300,150,'#5a302e'); roundFill(316,376,268,118,'#7a4442'); roundFill(336,396,228,78,'#5a302e');
-  // tables
-  table(150,430); table(430,410);
-  // lamp glows
-  [150,470,780].forEach(x=>{
-    ctx.fillStyle='#2a2118'; ctx.fillRect(x-2,0,4,14); ctx.fillStyle='#f0c561'; ctx.fillRect(x-9,14,18,10);
-    ctx.fillStyle='#fff3c9'; ctx.fillRect(x-4,17,8,5);
-    const gl=ctx.createRadialGradient(x,20,8,x,20,150); const fl=0.85+0.15*Math.sin(t/150+x);
-    gl.addColorStop(0,`rgba(255,206,120,${0.16*fl})`); gl.addColorStop(1,'rgba(255,206,120,0)');
-    ctx.fillStyle=gl; ctx.fillRect(x-150,0,300,260); });
-  // vignette
-  const vg=ctx.createRadialGradient(W/2,H/2,H*0.5,W/2,H/2,H*1.05);
-  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
-}
-function roundFill(x,y,w,h,c){ ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.fill(); }
-function table(x,y){ ctx.fillStyle='#2a1e12'; ctx.fillRect(x+8,y+30,7,26); ctx.fillRect(x+58,y+30,7,26);
-  const g=ctx.createLinearGradient(0,y,0,y+32); g.addColorStop(0,'#6e4c2c'); g.addColorStop(1,'#54371e');
-  ctx.fillStyle=g; ctx.fillRect(x,y,74,32); ctx.fillStyle='#8a6238'; ctx.fillRect(x,y,74,6); }
-
-/* ---- actors ---- */
-const SPOTS = {
-  'chalkboard':[170,320],'alcove':[300,268],'corner-table':[132,452],'window-table':[430,406],
-  'courtyard-door':[560,282],'rug':[520,442],'bar':[832,360],
-};
-function spotXY(spot,i,n){ const [fx,fy]=SPOTS[spot]||SPOTS['bar'];
-  return [fx + (n>1?(i-(n-1)/2)*54:0), fy + (n>1?Math.abs(i-(n-1)/2)*8:0)]; }
-function depth(fy){ return 1.8 + 0.8*Math.max(0,Math.min(1,(fy-260)/210)); }  // sprite scale
-
-const actors = new Map();
-let selected=null, hovered=null, clockPhase='evening', worldPaused=false;
-
-function ensureActor(id,name,spot){
-  let a=actors.get(id);
-  if(!a){ const [x,y]=spotXY(spot,0,1);
-    a={id,name,x,y,tx:x,ty:y,dir:'down',moving:false,anim:0,queue:[],bubble:null,bubbleUntil:0,thinking:false};
-    actors.set(id,a); }
-  a.name=name; a.img = sprites[id] || sprites.visitor; return a;
-}
-function relayout(occ){ const by={}; occ.forEach(o=>(by[o.spot]=by[o.spot]||[]).push(o));
-  for(const [spot,list] of Object.entries(by)) list.forEach((o,i)=>{ const a=ensureActor(o.id,o.name,spot);
-    const [tx,ty]=spotXY(spot,i,list.length); a.tx=tx; a.ty=ty; }); }
-
-function say(id,text,emote=false){ const a=actors.get(id); if(!a) return;
-  const clip=text.length>150?text.slice(0,150).replace(/\s+\S*$/,'')+'…':text;
-  a.queue.push((emote?'‹ ':'')+clip+(emote?' ›':'')); if(a.queue.length>3) a.queue.shift(); }
-
-/* ---- render ---- */
-let last=performance.now();
-function frame(now){
-  const dt=Math.min(50,now-last); last=now;
-  paintRoom(now);
-  for(const a of actors.values()){
-    const dx=a.tx-a.x, dy=a.ty-a.y, d=Math.hypot(dx,dy); a.moving=d>1.5;
-    if(a.moving){ const sp=Math.min(d,0.09*dt); a.x+=dx/d*sp; a.y+=dy/d*sp; a.anim+=dt;
-      a.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down'); }
-    if(!a.bubble||now>a.bubbleUntil){ a.bubble=null;
-      if(a.queue.length){ a.bubble=a.queue.shift(); a.bubbleUntil=now+Math.min(12000,3800+a.bubble.length*45); } }
-  }
-  const list=[...actors.values()].sort((p,q)=>p.y-q.y);
-  for(const a of list) drawActor(a,now);
-  const placed=[];
-  for(const a of list){ const box=actorBox(a);
-    const text=a.thinking?'·'.repeat(1+Math.floor(now/380)%3):(a.bubble&&now<a.bubbleUntil?a.bubble:null);
-    if(text) drawBubble(box.cx, box.top-6, text, placed); }
-  ctx.fillStyle=tintFor(clockPhase); ctx.fillRect(0,0,W,H);
-  if(worldPaused){ ctx.fillStyle='rgba(30,8,8,0.28)'; ctx.fillRect(0,0,W,H); }
-  requestAnimationFrame(frame);
-}
-function actorBox(a){ const s=depth(a.y), h=FR*s, w=FR*s;
-  return {cx:a.x, top:a.y-h+10*s, w, h, x:a.x-w/2, y:a.y-h}; }
-function drawActor(a,now){
-  const s=depth(a.y), box=actorBox(a);
-  // shadow
-  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(a.x,a.y,16*s*0.6,5*s,0,0,7); ctx.fill();
-  // selection/hover glow
-  if(a.id===selected||a.id===hovered){ ctx.save(); ctx.shadowColor=a.id===selected?'#e6b055':'#fff';
-    ctx.shadowBlur=18; }
-  if(a.img){ const col=a.moving?(1+Math.floor(a.anim/90)%8):0; const row=ROWS[a.dir]||2;
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(a.img, col*FR,row*FR,FR,FR, Math.round(box.x),Math.round(box.y), Math.round(box.w),Math.round(box.h)); }
-  if(a.id===selected||a.id===hovered) ctx.restore();
-  // name plate (below feet)
-  ctx.font='600 12px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='center';
-  const lw=ctx.measureText(a.name).width+14;
-  ctx.fillStyle=a.id===selected?'rgba(230,176,85,0.92)':'rgba(0,0,0,0.65)';
-  rr(a.x-lw/2,a.y+2,lw,18,9); ctx.fill();
-  ctx.fillStyle=a.id===selected?'#1e1408':'#efe6d5'; ctx.fillText(a.name,a.x,a.y+15); ctx.textAlign='left';
-}
-function tintFor(p){ return ({night:'rgba(12,18,50,0.20)','small hours':'rgba(6,10,40,0.26)',
-  evening:'rgba(50,25,60,0.10)',morning:'rgba(255,236,180,0.04)',afternoon:'rgba(255,210,140,0.04)',
-  midday:'rgba(0,0,0,0)'}[p]??'rgba(50,25,60,0.10)'); }
-function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
-
-function drawBubble(cx,bottomY,text,placed){
-  ctx.font='15px "Segoe UI",system-ui,sans-serif';
-  const words=text.split(' '),lines=['']; const maxW=250;
-  for(const w of words){ const t=lines[lines.length-1]?lines[lines.length-1]+' '+w:w;
-    if(ctx.measureText(t).width>maxW&&lines[lines.length-1]) lines.push(w); else lines[lines.length-1]=t; }
-  const bw=Math.min(maxW,Math.max(...lines.map(l=>ctx.measureText(l).width)))+24, bh=lines.length*20+18;
-  let bx=Math.max(8,Math.min(W-bw-8,cx-bw/2)), by=bottomY-bh, guard=0;
-  const hit=r=>placed.some(p=>!(r.x+r.w<p.x||p.x+p.w<r.x||r.y+r.h<p.y||p.y+p.h<r.y));
-  let rect={x:bx,y:Math.max(8,by),w:bw,h:bh};
-  while(hit(rect)&&guard++<20&&rect.y>8) rect.y-=14; rect.y=Math.max(8,rect.y); placed.push(rect); bx=rect.x; by=rect.y;
-  ctx.save(); ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=16; ctx.shadowOffsetY=4;
-  const gr=ctx.createLinearGradient(0,by,0,by+bh); gr.addColorStop(0,'rgba(252,247,235,0.98)'); gr.addColorStop(1,'rgba(244,236,220,0.98)');
-  ctx.fillStyle=gr; rr(bx,by,bw,bh,13); ctx.fill(); ctx.restore();
-  ctx.fillStyle='rgba(248,241,227,0.98)'; const tx=Math.max(bx+16,Math.min(bx+bw-16,cx));
-  ctx.beginPath(); ctx.moveTo(tx-8,by+bh-1); ctx.lineTo(tx+8,by+bh-1); ctx.lineTo(tx,by+bh+12); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#2a2016'; ctx.font='15px "Segoe UI",system-ui,sans-serif'; ctx.textAlign='left';
-  lines.forEach((l,i)=>ctx.fillText(l,bx+12,by+24+i*20));
+  for(const [id,a] of [...avatars]) if(!seen.has(id)){ a.el.remove(); avatars.delete(id); }
+  $('ejectsel').innerHTML=occ.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
 }
 
-/* ---- picking ---- */
-function actorAt(ev){ const r=cv.getBoundingClientRect();
-  const mx=(ev.clientX-r.left)*W/r.width, my=(ev.clientY-r.top)*H/r.height;
-  let best=null,bz=-1;
-  for(const a of actors.values()){ if(a.id==='you') continue; const b=actorBox(a);
-    if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h&&a.y>bz){best=a;bz=a.y;} }
-  return best; }
-cv.addEventListener('mousemove',ev=>{ const a=actorAt(ev); hovered=a?a.id:null; cv.style.cursor=a?'pointer':'default';
-  // preview the real face on hover (unless you've committed to someone)
-  if(a && a.id!==selected){ const p=portraits[a.id]; if(p){ $('portrait').src=p.src; $('portrait').style.display='block'; $('target').textContent=a.name; } }
-  else if(!a && !selected){ $('portrait').style.display='none'; $('target').textContent='— pick someone'; }
-  else if(!a && selected){ const p=portraits[selected]; if(p){ $('portrait').src=p.src; } $('target').textContent=actors.get(selected)?.name||selected; }
-});
-cv.addEventListener('click',ev=>{ const a=actorAt(ev); if(!a) return; selectActor(a); });
-function selectActor(a){ selected=a.id; $('target').textContent=a.name; $('hint').style.display='none';
-  const p=portraits[a.id]; if(p){ $('portrait').src=p.src; $('portrait').style.display='block'; }
-  else $('portrait').style.display='none';
-  ($('name').value.trim()?$('msg'):$('name')).focus(); }
+function speak(id,text,emote){
+  const a=avatars.get(id); if(!a) return;
+  a.el.classList.add('speaking');
+  const b=a.el.querySelector('.bubble');
+  b.textContent=(emote?text:text); b.classList.toggle('emote',!!emote); b.classList.add('show');
+  clearTimeout(a.t1); clearTimeout(a.t2);
+  a.t1=setTimeout(()=>b.classList.remove('show'), Math.min(9000,3500+text.length*40));
+  a.t2=setTimeout(()=>a.el.classList.remove('speaking'), Math.min(9000,3500+text.length*40)+400);
+}
+
+/* ---- selection + chat ---- */
+function select(id,name){
+  selected=id;
+  for(const [aid,a] of avatars) a.el.classList.toggle('sel',aid===id);
+  $('empty').style.display='none'; $('conv').style.display='flex';
+  $('chead').src=portraitURL(id); $('cname').textContent=name;
+  $('cera').textContent=ERAS[id]||'a guest of the café';
+  ($('name').value.trim()?$('msg'):$('name')).focus();
+}
+function addMsg(cls,who,text){
+  const d=document.createElement('div'); d.className='msg '+cls;
+  if(who) d.innerHTML=`<div class="nm">${who}</div>`;
+  const s=document.createElement('div'); s.textContent=text; d.appendChild(s);
+  $('log').appendChild(d); $('log').scrollTop=$('log').scrollHeight; return s;
+}
+async function send(){
+  const name=$('name').value.trim(), text=$('msg').value.trim();
+  if(!name){$('name').focus();return} if(!text||!selected){$('msg').focus();return}
+  localStorage.setItem('interval-name',name);
+  addMsg('me','',text); $('msg').value=''; $('send').disabled=true;
+  const pend=addMsg('npc pending',$('cname').textContent,'…');
+  try{
+    const r=await fetch('/gateway/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({display_name:name,target:selected,text})});
+    const data=await r.json(); const reply=r.ok?data.reply:(data.detail||'…');
+    pend.parentElement.classList.remove('pending'); pend.textContent=reply;
+    speak(selected,reply,false);
+  }catch(e){ pend.textContent='the café did not answer.'; }
+  $('send').disabled=false; $('msg').focus();
+}
+$('send').onclick=send;
+$('msg').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('name').addEventListener('keydown',e=>{if(e.key==='Enter')$('msg').focus()});
 
 /* ---- world state ---- */
 async function loadRoom(){
-  let r; try{ r=await (await fetch('/gateway/room')).json(); }catch{ $('worldmeta').textContent='offline'; return; }
-  $('cafe').textContent=r.cafe; clockPhase=r.clock_time; worldPaused=r.paused;
-  $('statusdot').className='dot'+(r.paused?' paused':'');
-  $('worldmeta').textContent=`tick ${r.tick} · ${r.clock_time} · ${r.weather}`+(r.paused?' · paused':'');
-  if(r.paused){ $('banner').textContent='The world is paused'; $('banner').classList.add('alert'); $('banner').style.display='block'; }
-  else if($('banner').classList.contains('alert')){ $('banner').style.display='none'; $('banner').classList.remove('alert'); }
-  const ids=new Set(r.occupants.map(o=>o.id));
-  for(const id of [...actors.keys()]) if(!ids.has(id)&&id!=='you') actors.delete(id);
-  relayout(r.occupants);
-  $('ejectsel').innerHTML=r.occupants.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
+  let r; try{ r=await (await fetch('/gateway/room')).json(); }catch{ $('clock').textContent='offline'; return; }
+  $('cafe').textContent=r.cafe; $('tick').textContent=r.tick;
+  $('clock').textContent=r.clock_time+' · '+r.weather+(r.paused?' · paused':'');
+  $('dot').className='dot'+(r.paused?' paused':'');
+  placeAvatars(r.occupants);
 }
 
-/* ---- SSE ---- */
-function startFeed(){ const es=new EventSource('/gateway/events');
-  es.onmessage=ev=>{ const e=JSON.parse(ev.data);
-    if(e.tool==='say') say(e.actor,e.text); else if(e.tool==='emote') say(e.actor,e.text,true);
-    else if(e.tool==='event_seed') banner(e.text); else if(e.tool==='eject') actors.delete(e.actor);
-    const d=document.createElement('div'); d.innerHTML=`<span class="tk">t${e.tick}</span> <span class="actor">${e.actor}</span> `+(e.text||`<em>${e.tool}</em>`);
-    $('feed').prepend(d); while($('feed').children.length>50) $('feed').lastChild.remove(); }; }
-let bannerTimer; function banner(text){ if(worldPaused) return; $('banner').textContent=text; $('banner').style.display='block';
-  clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>{ if(!$('banner').classList.contains('alert')) $('banner').style.display='none'; },12000); }
-
-/* ---- chat ---- */
-function bubbleMsg(cls,who,text){ const d=document.createElement('div'); d.className='msg '+cls;
-  d.innerHTML=`<div class="who2">${who}</div>`; const b=document.createElement('div'); b.textContent=text; d.appendChild(b);
-  $('chatlog').appendChild(d); $('chatlog').scrollTop=$('chatlog').scrollHeight; return b; }
-async function send(){ const name=$('name').value.trim(), text=$('msg').value.trim();
-  if(!name) return $('name').focus(); if(!text) return $('msg').focus();
-  if(!selected){ bubbleMsg('npc pending','system','Click a figure in the café first.'); return; }
-  localStorage.setItem('interval-name',name);
-  const npc=actors.get(selected), npcName=npc?.name||selected;
-  bubbleMsg('me',name,text); $('msg').value=''; $('send').disabled=true;
-  const pend=bubbleMsg('npc pending',npcName,'…'); if(npc) npc.thinking=true;
-  try{ const res=await fetch('/gateway/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({display_name:name,target:selected,text})}); const data=await res.json();
-    const reply=res.ok?data.reply:(data.detail||'no answer');
-    pend.parentElement.classList.remove('pending'); pend.textContent=reply; say(selected,reply);
-  }catch(e){ pend.textContent='the café did not answer — '+e; }
-  if(npc) npc.thinking=false; $('send').disabled=false; $('msg').focus(); }
-$('send').onclick=send;
-$('msg').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
-$('name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('msg').focus(); });
+/* ---- live feed ---- */
+const es=new EventSource('/gateway/events');
+const murmur=[];
+es.onmessage=ev=>{
+  const e=JSON.parse(ev.data);
+  if(e.tool==='say') speak(e.actor,e.text,false);
+  else if(e.tool==='emote') speak(e.actor,e.text,true);
+  else if(e.tool==='event_seed'){ $('seed').textContent=e.text; $('seed').classList.add('show');
+    clearTimeout(window._st); window._st=setTimeout(()=>$('seed').classList.remove('show'),11000); }
+  if(e.text){ murmur.unshift(`<span class="a">${e.actor}</span> <span class="m">${e.text}</span>`);
+    murmur.length=Math.min(murmur.length,8); $('murmurs').innerHTML=murmur.slice(0,3).join('&nbsp;&nbsp;·&nbsp;&nbsp;'); }
+};
 
 /* ---- operator ---- */
-async function op(kind,arg){ const token=$('admintoken').value.trim();
-  if(!token){ $('opstatus').textContent='admin token required'; return; }
-  const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
-  const res=kind==='pause'?await fetch('/admin/pause',{method:'POST',headers,body:JSON.stringify({paused:arg})})
-    :await fetch('/admin/eject/'+$('ejectsel').value,{method:'POST',headers});
-  $('opstatus').textContent=res.ok?`${kind} ok`:`${kind} failed (${res.status})`; loadRoom(); }
+$('opbtn').onclick=()=>$('opdlg').showModal();
+async function op(kind,arg){
+  const t=$('admtok').value.trim(); if(!t){$('opstat').textContent='admin token required';return}
+  const h={'Authorization':'Bearer '+t,'Content-Type':'application/json'};
+  const r=kind==='pause'?await fetch('/admin/pause',{method:'POST',headers:h,body:JSON.stringify({paused:arg})})
+    :await fetch('/admin/eject/'+$('ejectsel').value,{method:'POST',headers:h});
+  $('opstat').textContent=r.ok?kind+' ✓':kind+' failed ('+r.status+')'; loadRoom();
+}
 
-/* ---- boot ---- */
-(async()=>{
-  for(const k of [...KNOWN,'visitor']){ sprites[k]=await loadImg(`/assets/sprites/${k}.png`); portraits[k]=await loadImg(`/assets/${k}.png`); }
-  await loadRoom(); startFeed(); setInterval(loadRoom,6000); requestAnimationFrame(frame);
-})();
+loadRoom(); setInterval(loadRoom,6000);
 </script>
 </body>
 </html>
