@@ -312,6 +312,13 @@ async function op(kind,arg){ const t=$('admtok').value.trim(); if(!t){$('opstat'
 window.op=op;
 
 loadRoom(); setInterval(loadRoom,6000);
+
+/* keep the café lively only while THIS tab is actually visible (review #2):
+   a hidden/background tab lets the world fall idle and stops burning quota. */
+function ping(){ if(document.visibilityState==='visible')
+  fetch('/gateway/presence',{method:'POST'}).catch(()=>{}); }
+ping(); setInterval(ping,45000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') ping(); });
 </script>
 </body>
 </html>

@@ -11,6 +11,7 @@ One codebase, persona injected via env (ADR 5):
 Run: uvicorn "npc.runtime:create_app" --factory --port 9000
 """
 
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -87,13 +88,23 @@ def create_app() -> FastAPI:
     app = create_npc_app(config, public_url)
     state = app.state.npc
 
+    # One turn at a time per NPC: serialize the tick loop and inline visitor
+    # replies so they never interleave on the shared Mind/router (review #3).
+    turn_lock = asyncio.Lock()
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         token, _created = _register_with_engine(engine_url, admin_token, config)
         engine = McpEngineClient(engine_url, token)
         app.state.engine = engine
-        app.state.mind = Mind(config, engine, peers)
-        state.visitor_reply_fn = app.state.mind.reply_to_visitor  # inline (FR-5.2)
+        mind = Mind(config, engine, peers)
+        app.state.mind = mind
+
+        async def guarded_visitor_reply(item):
+            async with turn_lock:
+                return await mind.reply_to_visitor(item)
+
+        state.visitor_reply_fn = guarded_visitor_reply  # inline (FR-5.2)
         # Seed biographical memories iff the agent has none yet — idempotent
         # even if an earlier boot died between registration and seeding.
         existing = await engine.call("recall", {"query": "", "k": 1})
@@ -107,7 +118,8 @@ def create_app() -> FastAPI:
     async def tick(body: TickBody) -> dict:
         inbox = state.drain_inbox()
         mind: Mind = app.state.mind
-        return await mind.run_tick(body.tick, inbox)
+        async with turn_lock:
+            return await mind.run_tick(body.tick, inbox)
 
     @app.get("/llm-usage")
     def llm_usage() -> dict:

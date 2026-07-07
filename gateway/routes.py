@@ -86,9 +86,20 @@ async def chat(body: ChatBody) -> dict:
     return {"ok": True, "from": body.target, "reply": reply, "visitor_id": vid}
 
 
+@router.post("/presence")
+def presence_ping() -> dict:
+    """A visible tab pings this to keep the café lively (fast heartbeat).
+
+    Separate from /room so a hidden/background tab — which still polls /room to
+    stay rendered — does NOT count as watching and lets the world fall idle,
+    protecting the free-tier quota (review finding #2).
+    """
+    presence.mark()
+    return {"ok": True}
+
+
 @router.get("/room")
 def room() -> dict:
-    presence.mark()  # just watching the café keeps it lively (fast heartbeat)
     with session_scope() as session:
         world = session.get(World, 1)
         occupants = [
