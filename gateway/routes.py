@@ -119,40 +119,73 @@ def room() -> dict:
     }
 
 
-@router.get("/events")
-async def events_stream(since_id: int = -1):
-    """SSE feed of public room happenings (whispers stay private).
+class _EventBroadcaster:
+    """One shared DB tail fanned out to all SSE clients (review #4).
 
-    since_id=-1 (default) streams from NOW — new visitors shouldn't replay
-    the world's entire history into their feed.
+    Replaces per-client DB polling: a single background task reads new public
+    events every 2s and pushes them to every subscriber's queue, so DB load is
+    O(1) in the number of connected clients instead of O(clients).
     """
-    if since_id < 0:
+
+    def __init__(self) -> None:
+        self._subs: set[asyncio.Queue] = set()
+        self._task: asyncio.Task | None = None
+
+    def _ensure_running(self) -> None:
+        if self._task is None or self._task.done():
+            self._task = asyncio.create_task(self._pump())
+
+    async def _pump(self) -> None:
         with session_scope() as session:
-            since_id = session.scalar(select(func.max(Event.id))) or 0
+            last_id = session.scalar(select(func.max(Event.id))) or 0
+        while self._subs:
+            try:
+                rows = []
+                with session_scope() as session:
+                    for e in session.scalars(
+                        select(Event).where(Event.id > last_id).order_by(Event.id).limit(100)
+                    ):
+                        last_id = max(last_id, e.id)
+                        if e.tool not in FEED_TOOLS or not e.result.get("ok"):
+                            continue
+                        rows.append({"id": e.id, "tick": e.tick, "actor": e.actor_id,
+                                     "tool": e.tool, "text": str(e.payload.get("text", ""))})
+                for row in rows:
+                    for q in list(self._subs):
+                        if q.qsize() < 200:
+                            q.put_nowait(row)
+            except Exception:
+                logger.exception("event pump error")
+            await asyncio.sleep(2)
+        self._task = None
+
+    def subscribe(self) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue()
+        self._subs.add(q)
+        self._ensure_running()
+        return q
+
+    def unsubscribe(self, q: asyncio.Queue) -> None:
+        self._subs.discard(q)
+
+
+_broadcaster = _EventBroadcaster()
+
+
+@router.get("/events")
+async def events_stream():
+    """SSE feed of public room happenings — streamed from NOW (whispers stay private)."""
+    q = _broadcaster.subscribe()
 
     async def stream():
-        last_id = since_id
-        while True:
-            rows: list[dict] = []
-            with session_scope() as session:
-                for e in session.scalars(
-                    select(Event).where(Event.id > last_id).order_by(Event.id).limit(50)
-                ):
-                    last_id = max(last_id, e.id)
-                    if e.tool not in FEED_TOOLS or not e.result.get("ok"):
-                        continue
-                    rows.append(
-                        {
-                            "id": e.id,
-                            "tick": e.tick,
-                            "actor": e.actor_id,
-                            "tool": e.tool,
-                            "text": str(e.payload.get("text", "")),
-                        }
-                    )
-            for row in rows:
-                yield f"data: {json.dumps(row, ensure_ascii=False)}\n\n"
-            yield ": keepalive\n\n"
-            await asyncio.sleep(2)
+        try:
+            while True:
+                try:
+                    row = await asyncio.wait_for(q.get(), timeout=15)
+                    yield f"data: {json.dumps(row, ensure_ascii=False)}\n\n"
+                except TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            _broadcaster.unsubscribe(q)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
