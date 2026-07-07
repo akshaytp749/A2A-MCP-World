@@ -39,15 +39,15 @@ under enforced rules.
    (Langfuse + event log). "Why did Tesla start a feud with Darwin?" must be answerable.
 
 ### Non-goals (out of scope for v1)
-- No external game engine/framework (Phaser, Unity, …) and no gameplay
-  mechanics (physics, collision, player movement). The UI is a **retro pixel
-  scene**: a hand-rolled ~zero-dependency canvas renderer draws the café,
-  sprites for each resident, and speech bubbles from the live event feed.
-  Sprite positions are client-side flavor — NOT world state (the engine has
-  no coordinates; G1 unaffected). v1.1 amendment; was "text + minimal UI".
-- **No multi-room map.** The world is a single room (the café). No movement
-  system, no exits, no `move` tool. Courtyard/alcove exist only as flavor in
-  the room description. A room graph is a v2 idea, not a v1 gap.
+- No game engine/framework and no gameplay mechanics. The UI is a **portrait-
+  forward web page** (plain DOM/CSS): a recognizable face portrait per resident
+  over an atmospheric backdrop, a live room-conversation feed, and a chat panel.
+  (Walking pixel sprites were tried and dropped — a 16px sprite can't hold a
+  face; every game in the genre uses dialogue portraits, so we lead with those.)
+  v1.2 amendment; was "text + minimal UI" → "pixel scene" → portraits.
+- **No multi-room map.** The world is a single room (the café). Positions
+  *within* it are named spots (`move_to`), not a room graph — the only movement
+  is choosing a spot in the one room. A multi-room map is a v2 idea.
 - No combat system, no complex economy (coins + flat-price items only).
 - No user accounts/auth for human visitors (session-scoped guest identity).
 - No agent-to-agent payments (AP2/x402), no blockchain anything.
@@ -129,9 +129,10 @@ under enforced rules.
   free-tier request quota and auto-sets `WORLD_PAUSED=1` at 80% consumption.
 
 ### FR-5 Human interface
-- FR-5.1 Web chat: pick a display name → enter the café → see the pixel café
-  scene with the residents visibly present as sprites (speech bubbles for
-  says/emotes from the live feed) → click/select any NPC and talk to them.
+- FR-5.1 Web page: enter the café → see each resident as a recognizable face
+  portrait over an atmospheric backdrop, a live feed of the residents' own
+  conversation (say/emote from SSE), and speech bubbles over whoever is talking
+  → pick a display name, click a face, and chat privately (inline reply).
 - FR-5.2 Human messages to an NPC are delivered over the same A2A path
   (the gateway acts as the visitor's agent). **Visitor-initiated messages are
   answered inline (streamed), never deferred to the next tick** — the FR-3.3
@@ -160,34 +161,39 @@ under enforced rules.
   from the engine (different host) must live in the world for ≥ 48h.
 
 ### FR-7 Observability & evals
-- FR-7.1 Every LLM call traced in Langfuse (agent id, tick id, tokens, cost).
+- FR-7.1 Every LLM call goes through `llm/router.py` and is traced in Langfuse
+  (agent id, tick, tokens, tier). Prompts are **Langfuse-managed** with an
+  in-code fallback (`llm/prompts.managed`) so they can be versioned/tuned in the
+  UI without redeploy; generations link to their managed prompt version.
 - FR-7.2 Every world mutation in `events` with causal chain (which agent, which
   tool call, which tick).
-- FR-7.3 Nightly coherence eval (scripted): sample N conversations → LLM-judge
-  scores persona consistency + memory accuracy (did the NPC contradict a stored
-  memory?) → results to a `eval_runs` table. Target: ≥ 80% consistency.
+- FR-7.3 Coherence eval (`scripts/run_eval.py`): sample conversations from the
+  event log → LLM-judge scores persona consistency + memory accuracy → a
+  `eval_runs` row AND **Langfuse Scores**. Target: ≥ 80% consistency (≥ 70 for
+  M3). First live run: consistency 93, memory 98.
 
 ---
 
 ## 4. Constraints
 
 - **Cost: $0/month — hard constraint, no paid services anywhere.**
-  - **LLMs:** free tiers only, via `llm/router.py`: Google AI Studio
-    (Gemini Flash-Lite = cheap tier, Gemini Flash = focal tier) with Groq
-    free tier as fallback provider. Paid models are out of scope for v1.
+  - **LLMs:** free tiers only, via `llm/router.py` with a fallback chain:
+    focal tier = **Groq `openai/gpt-oss-120b`** (raced fastest + best persona),
+    cheap tier = Gemini `gemini-flash-lite-latest`, then Gemini flash →
+    Groq llama → OpenRouter `:free` → a quiet turn. Paid models out of scope.
+  - **Art:** portraits generated once via **Pollinations.ai** (free, keyless);
+    the images are committed and served locally (no runtime dependency).
   - **Budgets are request-count quotas per day**, enforced in code (FR-4.4):
-    adaptive tick rate + idle NPC subset keep idle-day usage well under free
-    quotas. Kill-switch env var `WORLD_PAUSED=1` (manual + auto at 80% quota).
+    adaptive tick rate + idle NPC subset + visibility-gated presence keep usage
+    under free quotas. Kill-switch `WORLD_PAUSED=1` (manual + auto at 80% quota).
 - **Hosting: your own PC.** `docker compose up` IS the deployment (engine +
-  Postgres container + NPCs). Public access (web UI, guest registration) via a
-  free Cloudflare Tunnel. Optional later: an Oracle Cloud Always Free VM for
-  always-on operation — but never paid hosting. Consequence (accepted): the
-  world only ticks while the host machine is on.
-- **Stack:** Python 3.12, FastAPI, Postgres (Docker container; Supabase free
-  tier only if a hosted DB is ever wanted), MCP Python SDK, A2A Python SDK,
-  APScheduler, Langfuse free tier (sampled — see ARCHITECTURE.md §7).
-  Frontend: single-page HTML+htmx **served by the engine itself** (no separate
-  frontend deploy, no CORS).
+  Postgres container + 5 NPCs). Public access via a free Cloudflare Tunnel.
+  Optional later: an Oracle Cloud Always Free VM for always-on — never paid
+  hosting. Consequence (accepted): the world only ticks while the host is on.
+- **Stack:** Python 3.12, FastAPI, Postgres (Docker), MCP + A2A Python SDKs,
+  APScheduler, google-genai + httpx (Groq/OpenRouter), Langfuse (tracing,
+  prompt management, scores). Frontend: one hand-written HTML/CSS page **served
+  by the engine itself** (no framework, no build step, no CORS).
 - **Timeline:** 4 weeks part-time (see ARCHITECTURE.md §9 for the phase plan).
 - **Team:** solo + Claude Code.
 

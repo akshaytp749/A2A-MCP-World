@@ -12,14 +12,19 @@ New scope → propose a SPEC.md edit first; do NOT silently expand scope
 
 ## Commands
 ```bash
-docker compose up -d            # local: engine + postgres + 2 NPCs
-pytest -q                       # all tests; subsets: tests/engine tests/a2a tests/gate
+docker compose --profile full up -d   # local: engine + postgres + 5 NPCs (core = 2)
+pytest -q                       # all tests; subsets: tests/engine tests/a2a tests/llm
 pytest tests/e2e -q             # slower, needs compose stack running
 python scripts/verify_invariants.py   # world-state invariants; MUST exit 0
 python scripts/demo_rumor.py    # M2 acceptance demo
+python scripts/run_eval.py      # coherence eval → eval_runs + Langfuse Scores
+python scripts/generate_portraits.py     # (re)generate face portraits ($0, one-time)
+python scripts/seed_langfuse_prompts.py  # push default prompts to Langfuse mgmt
 ruff check . && ruff format .   # lint/format (pre-commit runs both)
 cloudflared tunnel run interval # expose local stack publicly (free tunnel)
 ```
+DB access from host scripts: Postgres is published on :5433
+(`DATABASE_URL=postgresql+psycopg://interval:interval@localhost:5433/interval`).
 Deployment = `docker compose up` on this machine (or a free VM). There is no
 paid hosting and no paid API key anywhere; cost constraint is $0 (SPEC §4).
 
@@ -67,8 +72,10 @@ guests. Diagram + tool table: ARCHITECTURE.md §1 and §4.
 - Structured errors: `{ok, code, msg}` — codes in engine/errors.py, reused
   by tests.
 - Personas/world content = YAML in world/seed/ (content changes ≠ code changes).
-- Every LLM call goes through llm/router.py (tier routing + Langfuse trace);
-  no direct SDK calls elsewhere.
+- Every LLM call goes through llm/router.py (tier routing, provider fallback,
+  budgets, Langfuse trace); no direct SDK calls elsewhere. Every prompt goes
+  through `llm/prompts.managed(name, fallback)` — Langfuse-managed with the
+  in-code copy as the offline/$0 fallback; keep the fallback the source of truth.
 - Naming: tick ids are ints; agent ids are slugs (`marta`, `guest-bard-7f2`).
 
 ## Pointers

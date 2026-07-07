@@ -70,26 +70,34 @@ One codebase, many instances (persona injected via env/YAML). Each instance:
      structured plan `{thought, actions[], replies[], new_memories[]}`.
   4. *Act:* execute ≤3 engine tool calls; on `Err`, one retry with error fed back.
   5. *Converse:* send queued replies via A2A to targets.
-  6. *Remember:* write `new_memories` with salience scores; every 50 memories,
-     run a compaction summary (cheap model).
+  6. *Remember:* write `new_memories` with salience; every `COMPACT_EVERY` (30)
+     memories, roll the salient ones into one durable `summary` memory via a
+     cheap LLM call (FR-2.4 — raw episodics kept, rollup added).
+- The tick loop and inline visitor replies are serialized per NPC by an
+  `asyncio.Lock` (shared singleton `Mind`/router).
 - **Budgets enforced in code:** decide=1 call, retry≤1, compaction amortized;
   ceiling 6 LLM calls/tick (FR-2.3).
 
-### 2.3 Gateway (`gateway/`)
-- Bridges humans to the agent world: takes a chat message from the UI, wraps it
-  as an A2A `message/send` from a synthetic "visitor agent" identity, streams
-  the NPC's reply back over SSE.
-- Assigns visitor ids (name + cookie) so NPCs can form memories of humans.
+### 2.3 Gateway (`gateway/`, mounted in the engine)
+- Bridges humans to the agent world: `POST /gateway/chat` wraps the message as
+  an A2A `message/send` from a synthetic "visitor agent" and returns the NPC's
+  inline reply. `GET /gateway/room` is the world snapshot (occupants + spots).
+- `GET /gateway/events` is an SSE feed driven by ONE shared broadcaster (a
+  single DB tail fanned out to all clients — O(1) in client count, not
+  O(clients)). `POST /gateway/presence` is pinged only by a *visible* tab to
+  keep the world lively without a forgotten/background tab draining quota.
+- Assigns visitor ids from the display name so NPCs form memories of humans.
 
 ### 2.4 Heartbeat (`engine/heartbeat.py`)
-- APScheduler job in the engine process. Per tick: advance clock → roll event
-  seeds → POST `/tick` webhook to the NPCs due a turn, in randomized order
-  (staggered, await with per-NPC timeout 20s) → run invariant checker → emit
-  tick summary event. Global tick timeout 120s (FR-4.3).
-- **Adaptive cadence (FR-4.1/4.2):** 10-min interval and all NPCs ticked while
-  a human session is live; 45-min interval and a round-robin subset of 2 NPCs
-  when idle. Tracks a daily LLM-request counter; auto-pauses at 80% of the
-  free-tier quota (FR-4.4).
+- APScheduler job in the engine. A light check every 15s ticks when due for the
+  current cadence, so presence changes are responsive (the café wakes within
+  seconds of someone opening it). Per tick: advance clock (real time-of-day) →
+  expire stale trades (>3 ticks) → roll event seeds → webhook due NPCs in
+  randomized order (per-NPC 60s, global 120s, FR-4.3) → aggregate LLM usage
+  (parallel) and auto-pause at 80% quota (FR-4.4) → invariant check (pauses on
+  violation) → tick-summary event.
+- **Adaptive cadence (FR-4.1/4.2):** ~90s and all NPCs while a human is
+  watching; 45-min and a rotating subset of 2 NPCs when idle.
 
 ### 2.5 Gatekeeper (`gate/`)
 - REST: `POST /register {card_url}` → fetch + JSON-schema validate card →
@@ -97,12 +105,17 @@ One codebase, many instances (persona injected via env/YAML). Each instance:
   and the character walks into the café (arrival event).
 - Maintains strike counts; 3 strikes or rate-limit breach → revoke + eject event.
 
-### 2.6 Web UI (`web/`)
-- One page: café panel (description, occupants, recent happenings from SSE),
-  chat panel (talk to a selected NPC), operator drawer (feature-flagged).
-- htmx + SSE keeps it dependency-light; static files served by the engine's
-  FastAPI app itself — no separate frontend deploy, no CORS, $0. Exposed
-  publicly through the Cloudflare Tunnel when needed.
+### 2.6 Web UI (`web/index.html`)
+- Portrait-forward single page (plain DOM/CSS, no framework): an atmospheric
+  café backdrop; each resident is a recognizable **face portrait** medallion
+  (`web/assets/portraits/*.jpg`, generated once at $0 by
+  `scripts/generate_portraits.py`) positioned by their `move_to` spot, gently
+  floating, glowing + speaking a bubble when they talk. The default side panel
+  is a live **room feed** of the residents' own conversation (so you can watch
+  them talk to each other); click a face to switch to a private chat that
+  streams their in-character reply. Operator controls (pause/eject) in a dialog.
+- Served by the engine's FastAPI app itself (`/`, `/assets/…`) — no separate
+  frontend deploy, no CORS, $0. Exposed publicly via Cloudflare Tunnel.
 
 ---
 
@@ -116,7 +129,9 @@ description live in the `world` row (seeded from `world/seed/world.yaml`).
 agents(id, kind enum('resident','guest','visitor'), name, persona_ref,
        endpoint_url, card_json jsonb, model_tier, token_hash,
        status enum('active','paused','ejected'), coins int,
-       strikes int default 0, created_at)
+       strikes int default 0, spot varchar default 'bar', created_at)
+       -- spot = named place in the single room (engine.rules.CAFE_SPOTS);
+       --        NOT a room graph (one room, SPEC §1). Set via move_to.
 items(id, name, description, holder_agent_id nullable, price int)
        -- NULL holder = lying in the café (on the bar, the floor...)
 events(id bigserial, tick int, actor_id, tool, payload jsonb, result jsonb,
@@ -151,12 +166,13 @@ All tools take implicit `actor` from the bearer token. Errors are structured:
 | `say` | `text` | Broadcast to the café (filtered); emits event |
 | `whisper` | `target, text` | Private line to a present agent |
 | `emote` | `text` | Non-verbal action ("polishes a mug") |
+| `move_to` | `spot` | Walk to a named place in the café (`CAFE_SPOTS`); spot is world state |
 | `give` | `target, item_id\|coins` | Transfers if owned & target present |
 | `pick_up` / `drop` | `item_id` | Café↔inventory transfer |
-| `trade_offer` | `target, offer, ask` | Opens trade row |
+| `trade_offer` | `target, offer, ask` | Opens trade row (auto-expires after 3 ticks) |
 | `trade_respond` | `trade_id, accept` | Settles atomically or declines |
 | `recall_events` | `since_tick, filter?` | Actor-visible slice of event log |
-| `remember` | `content, salience` | Writes to actor's own memory only |
+| `remember` | `content, salience, kind?` | Writes to actor's own memory only (`kind`: episodic\|summary) |
 | `recall` | `query, k` | Search actor's own memory only |
 
 Guest tier = same surface minus nothing, but tighter rate limits; memory tools
@@ -171,7 +187,10 @@ are always scoped to the caller (no cross-agent memory access, FR-6.3).
   tick:N, from_character}` so agents can ground replies.
 - Async by default: receiving NPC ACKs, queues, replies on its own tick unless
   the queue is short (small worlds feel snappier with inline replies ≤1 hop).
-- Pair cap: 4 exchanges/pair/tick tracked engine-side via events (FR-3.4).
+- Pair cap (FR-3.4): an NPC stops replying to a peer after 4 consecutive-tick
+  back-and-forths (`npc/mind.py` `PAIR_CAP`); a >1-tick lull resets the run.
+  Enforced in the NPC (code + tests, per hard rule 3) since A2A traffic is
+  peer-to-peer and not visible to the engine.
 
 ## 6. Admission gate (guest NPCs)
 
@@ -189,11 +208,18 @@ Pass all → token + entry. Results stored on the agent row (mini scorecard).
 
 | Workload | Tier | Provider (free) | Notes |
 |---|---|---|---|
-| Background NPC decide | cheap | Gemini Flash-Lite (AI Studio free) | most volume |
-| Focal NPC decide (Socrates, Twain, Tesla) | mid | Gemini Flash (AI Studio free) | personality quality matters |
-| Memory compaction, filters | cheap | Gemini Flash-Lite | |
-| Nightly coherence judge | mid | Gemini Flash | small sample, N≈20 |
-| Any of the above on quota/outage | fallback | Groq free tier | router fails over automatically |
+| Focal NPC decide (Socrates, Twain, Tesla) | mid | **Groq `openai/gpt-oss-120b`** | raced fastest + best persona |
+| Background NPC decide | cheap | Gemini `gemini-flash-lite-latest` | most volume |
+| Memory compaction, coherence judge | cheap/mid | Gemini flash-lite / Groq | small volume |
+| Any of the above on quota/outage | fallback | Gemini flash-latest → Groq llama → OpenRouter :free | router walks the chain, else a quiet turn |
+
+Tier→model + fallback chain live in `llm/router.py` (`TIER_MODELS`,
+`TIER_FALLBACKS`, `provider_rungs`). Free-tier reality measured 2026-07:
+Gemini 2.5/2.0 models are 20/day or retired — use the `-latest` aliases and
+Gemini-3 class. Every prompt is a **Langfuse-managed prompt** with an in-code
+fallback (`llm/prompts.managed`, seeded by `scripts/seed_langfuse_prompts.py`),
+so prompts are versioned/tunable in the UI without redeploy; coherence-eval
+results are pushed to **Langfuse Scores** (`scripts/run_eval.py`).
 
 The scarce resource is **requests/day, not dollars**. Budgets are code, not
 hope: per-tick call ceilings, a daily request counter in `llm/router.py`,
@@ -209,28 +235,30 @@ interactions and gate probes, sample idle-tick traces at ~20%.
 ```
 the-interval/
 ├── CLAUDE.md  SPEC.md  ARCHITECTURE.md  GUEST_PROTOCOL.md  README.md
-├── engine/          # FastAPI + MCP server + heartbeat + rules.py
-├── npc/             # NPC runtime (A2A server + cognition loop)
-├── gateway/         # human↔A2A bridge + SSE
-├── gate/            # Gatekeeper (registration, probes, containment)
-├── web/             # UI (static, served by engine)
-├── world/seed/      # world.yaml (café, economy, relationships, event seeds),
-│                    # npcs/*.yaml (personas; one or more figures per file)
-├── scripts/         # demo_rumor.py, verify_invariants.py, run_eval.py
-├── tests/           # engine/ a2a/ gate/ e2e/  (mirrors src)
-└── docker-compose.yml   # THE deployment: engine + postgres + NPCs
+├── engine/          # FastAPI + MCP server + heartbeat + rules.py + invariants
+├── npc/             # NPC runtime (A2A server + client + cognition loop)
+├── gateway/         # human↔A2A bridge + SSE broadcaster + presence
+├── gate/            # Gatekeeper (registration, probes, containment) — M4
+├── llm/             # router.py (tiers/fallback/budgets/Langfuse) + prompts.py
+├── web/             # index.html + assets/portraits (served by engine)
+├── world/seed/      # world.yaml + npcs/*.yaml (personas; may group figures)
+├── scripts/         # demo_rumor, verify_invariants, run_eval, run_scripted_sim,
+│                    # generate_portraits, seed_langfuse_prompts
+├── tests/           # engine/ a2a/ llm/ (+ gate/ e2e/ to come) — mirrors src
+└── docker-compose.yml   # THE deployment: engine + postgres + 5 NPCs
 ```
 
 ## 9. Phase plan (maps 1:1 to SPEC §5 milestones)
 
-- **P1 Physics (Wk1):** schema + engine + rules + MCP tools + scripted bots +
-  invariant checker. *No LLMs this week.* Exit: M1 checks green.
-- **P2 Minds (Wk2):** NPC runtime, A2A cards/messaging, memory store, routing,
-  Langfuse. Exit: M2 green (rumor demo is the star).
-- **P3 Time+Humans (Wk3):** heartbeat, event seeds, gateway+UI, operator
-  controls, first eval. Exit: M3 green (24h unattended run).
-- **P4 Open Door (Wk4):** gatekeeper + probes + containment, GUEST_PROTOCOL.md,
-  external guest NPC, README/demo, publish. Exit: M4 green.
+- **P1 Physics — DONE:** schema + engine + rules + MCP tools + scripted bots +
+  invariant checker. M1 checks green.
+- **P2 Minds — DONE:** NPC runtime, A2A cards/messaging, memory + compaction,
+  multi-provider routing, Langfuse. M2 green (rumor demo passed).
+- **P3 Time+Humans — in progress:** heartbeat (adaptive), event seeds, gateway +
+  portrait UI, operator controls, coherence eval (~93%). Remaining: formally
+  run the M3 checklist incl. the 24h unattended run.
+- **P4 Open Door — not started:** gatekeeper + probes + containment,
+  GUEST_PROTOCOL.md, external guest NPC, README/demo. Exit: M4 green.
 
 ## 10. Key decisions (ADR-style, one-liners)
 
@@ -244,10 +272,18 @@ the-interval/
    noise; also becomes the gate's probe machinery later.
 5. **One NPC codebase, persona as data** — five NPCs are configs, not five
    services to maintain; guests can even fork it as a starter kit.
-6. **Single-room world** — no map, no `move` tool, no location state. Cuts a
-   whole validation class, and forces the cast into one conversation space,
-   which is where the drama is anyway. Privacy = `whisper`. Room graph is v2.
+6. **Single-room world with named spots** — no room graph. Positions *within*
+   the one room ARE world state (`move_to` → `agents.spot`), so an NPC's words
+   and movement stay consistent and the UI renders real state, not fake wander.
+   Privacy = `whisper`. A multi-room map is still v2.
 7. **$0 infrastructure by construction** — own PC + docker compose + free
    Cloudflare Tunnel; free-tier LLMs with request-count budgets and quota
    auto-pause. The cost constraint is enforced by what the system CAN'T do
    (no paid API keys configured), not by discipline.
+8. **Portrait-forward UI over a pixel game** — walking sprites can't hold a
+   recognizable face at 16px (no game shows walker faces; they use dialogue
+   portraits). So the UI centers on generated face portraits + a live room feed;
+   plain DOM/CSS (crisp images, real type, glass) beat canvas. (FR-5.1)
+9. **Prompts as Langfuse-managed with in-code fallback** — tune/version prompts
+   in the UI without redeploy, but a missing key or outage degrades to the
+   shipped copy, preserving $0/offline. (§7)
