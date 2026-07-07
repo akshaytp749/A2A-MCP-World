@@ -56,6 +56,15 @@ def roll_seeds(seeds: list[dict], rng: random.Random) -> list[str]:
     return [str(s["event"]) for s in seeds if rng.random() < float(s.get("p", 0))]
 
 
+_PHASE_BY_QUARTER = ["small hours", "morning", "midday", "afternoon", "evening", "night"]
+
+
+def clock_phase_for(hour: int) -> str:
+    """Time-of-day from the real clock, so it doesn't race/crawl with the tick
+    cadence (review #9). Six 4-hour phases aligned to actual hours."""
+    return _PHASE_BY_QUARTER[(hour // 4) % 6]
+
+
 # ------------------------------------------------------------------- presence
 
 
@@ -93,7 +102,7 @@ async def run_tick(rng: random.Random | None = None) -> dict:
             return {"skipped": True, "reason": "paused" if world else "unseeded"}
         world.tick += 1
         tick = world.tick
-        world.clock_time = CLOCK_PHASES[(tick // 4) % len(CLOCK_PHASES)]
+        world.clock_time = clock_phase_for(datetime.now().hour)
 
         from engine.handlers import expire_trades  # local import avoids a cycle
 
@@ -139,14 +148,16 @@ async def run_tick(rng: random.Random | None = None) -> dict:
             except Exception as exc:
                 failed.append((npc_id, f"{type(exc).__name__}"))
 
-        # Quota guard (FR-4.4): aggregate LLM usage across NPC processes.
-        used = 0
-        for _npc_id, url in npcs:
+        # Quota guard (FR-4.4): aggregate LLM usage across NPC processes,
+        # queried in parallel so it doesn't add N serial round-trips (review #8).
+        async def _usage(url: str) -> int:
             try:
                 res = await client.get(f"{url.rstrip('/')}/llm-usage")
-                used += int(res.json().get("used_today", 0))
+                return int(res.json().get("used_today", 0))
             except Exception:
-                pass
+                return 0
+
+        used = sum(await asyncio.gather(*(_usage(url) for _, url in npcs)))
 
     summary = {
         "tick": tick,
