@@ -38,6 +38,21 @@ from engine.rules import (
     validate,
 )
 
+TRADE_TTL_TICKS = 3  # an unanswered open trade expires after this many ticks
+
+
+def expire_trades(session: Session, tick: int, ttl: int = TRADE_TTL_TICKS) -> list[int]:
+    """Mark open trades untouched for `ttl` ticks as expired. Returns their ids."""
+    stale = session.scalars(
+        select(Trade).where(Trade.status == "open", Trade.tick_opened <= tick - ttl)
+    )
+    expired = []
+    for trade in stale:
+        trade.status = "expired"
+        expired.append(trade.id)
+    return expired
+
+
 ACTING_TOOLS = {
     "say",
     "whisper",

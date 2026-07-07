@@ -95,6 +95,13 @@ async def run_tick(rng: random.Random | None = None) -> dict:
         tick = world.tick
         world.clock_time = CLOCK_PHASES[(tick // 4) % len(CLOCK_PHASES)]
 
+        from engine.handlers import expire_trades  # local import avoids a cycle
+
+        expired = expire_trades(session, tick)
+        if expired:
+            _emit(session, tick, "trade_expired", {"trades": expired,
+                  "text": f"{len(expired)} unanswered offer(s) lapse."})
+
         seeds = []
         seed_path = Path(settings.seed_path)
         if seed_path.exists():
