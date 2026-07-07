@@ -22,7 +22,8 @@ from npc.config import NpcConfig
 logger = logging.getLogger("npc.mind")
 
 MAX_ACTIONS = 3  # FR-2.3
-MAX_REPLIES = 2  # client-side politeness; engine-side pair cap is FR-3.4
+MAX_REPLIES = 2  # replies emitted per tick
+PAIR_CAP = 4  # FR-3.4: consecutive back-and-forths to one peer before going quiet
 MAX_MEMORIES = 3
 # Reasoning models (gpt-oss) spend hidden reasoning tokens from the same
 # completion budget — a tight cap truncates the JSON plan mid-string.
@@ -142,6 +143,11 @@ class Mind:
         self.system_prompt = build_system_prompt(config)
         # Visitor replies are prose, not plans — no JSON schema in the prompt.
         self.persona_prompt = build_system_prompt(config, plan_schema=False)
+        # Pair-exchange cap (FR-3.4): consecutive back-and-forths this NPC sends
+        # to a single peer. Once a running conversation hits PAIR_CAP the NPC
+        # stops replying to that peer, breaking two-agent lock-in and tick
+        # storms. A gap of >1 tick lapses the run and resets the count.
+        self._pair: dict[str, list[int]] = {}  # peer id -> [last_tick, count]
 
     # ------------------------------------------------------------------ perceive
 
@@ -259,9 +265,22 @@ class Mind:
             url = self.peers.get(target)
             if not url or not text or target == self.config.id:
                 continue
+            if not self._pair_ok(target, tick):  # FR-3.4 pair-exchange cap
+                logger.info("%s stays quiet to %s (pair cap reached)", self.config.id, target)
+                continue
             await self.send(url, text, from_character=self.config.id, tick=tick)
             sent.append(target)
         return sent
+
+    def _pair_ok(self, target: str, tick: int) -> bool:
+        last, count = self._pair.get(target, [tick, 0])
+        if tick - last > 1:  # conversation lapsed — fresh run
+            count = 0
+        if count >= PAIR_CAP:
+            self._pair[target] = [tick, count]
+            return False
+        self._pair[target] = [tick, count + 1]
+        return True
 
     # ------------------------------------------------------------------ remember
 

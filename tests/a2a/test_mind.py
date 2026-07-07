@@ -181,3 +181,27 @@ async def test_llm_outage_makes_quiet_turn_not_crash():
     summary = await mind.run_tick(1, [InboxItem("tesla", "hello?", 1)])
     assert summary["actions"] == [] and summary["replied_to"] == []
     assert engine.acting_calls() == []  # silence, not a 500
+
+
+async def test_pair_cap_stops_after_four_consecutive(monkeypatch):
+    from npc.mind import PAIR_CAP
+    engine = FakeEngine()
+    sent: list = []
+    # a plan that always tries to reply to tesla
+    model = PlanModel(plan_json(replies=[{"to": "tesla", "text": "and another thing"}]))
+    mind = make_mind(engine, model, sent=sent)
+    for tick in range(1, 9):                       # consecutive ticks
+        await mind.run_tick(tick, [])
+    # only PAIR_CAP replies to tesla get through; the rest are withheld
+    assert len(sent) == PAIR_CAP
+
+
+async def test_pair_cap_resets_after_a_lull():
+    engine = FakeEngine()
+    sent: list = []
+    model = PlanModel(plan_json(replies=[{"to": "tesla", "text": "hello again"}]))
+    mind = make_mind(engine, model, sent=sent)
+    await mind.run_tick(1, [])
+    await mind.run_tick(2, [])  # 2 exchanges
+    await mind.run_tick(20, [])  # big gap -> fresh run
+    assert sent[-1] == ("http://tesla.local", "hello again")  # allowed again
