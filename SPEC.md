@@ -114,9 +114,11 @@ under enforced rules.
 - FR-3.4 Loop guard: max 4 back-and-forth exchanges per NPC pair per tick.
 
 ### FR-4 Heartbeat (the "living" part)
-- FR-4.1 Scheduler ticks the world every N minutes — **adaptive**: default 10
-  while at least one human is connected, 45 when idle (both configurable).
-  Rationale: cost control is structural, not tuned (see §4 Constraints).
+- FR-4.1 Scheduler ticks the world — **adaptive**: a lively ~90s while at least
+  one human is watching (so the café visibly moves), 45 min when idle (both
+  configurable). Presence is marked by watching OR chatting; the heartbeat
+  polls every 15s and ticks when due, so the world wakes within seconds of
+  someone opening it. Rationale: liveness when watched, quota saved when not.
 - FR-4.2 Each tick: advance world clock → maybe fire an event seed (rumor,
   delivery, storm; probability table in `world/seed/world.yaml`) → give NPCs
   autonomous turns (all NPCs when a human is connected; a rotating subset of 2

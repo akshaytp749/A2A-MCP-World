@@ -24,10 +24,11 @@ from engine.seed import load_seed
 
 logger = logging.getLogger("engine.heartbeat")
 
-FAST_SECONDS = 600  # human connected: 10 min (FR-4.1)
-IDLE_SECONDS = 2700  # empty café: 45 min
+FAST_SECONDS = 90  # human watching: a lively tick every ~90s (FR-4.1)
+IDLE_SECONDS = 2700  # empty café: 45 min (saves free-tier quota)
+CHECK_SECONDS = 15  # heartbeat wakes this often to decide whether to tick
 IDLE_SUBSET = 2  # NPCs per idle tick (FR-4.2)
-PRESENCE_WINDOW_SECONDS = 900  # a visitor counts as "here" for 15 min
+PRESENCE_WINDOW_SECONDS = 300  # a visitor counts as "here" for 5 min
 NPC_TICK_TIMEOUT = 60  # per-NPC webhook budget (LLM latency included)
 GLOBAL_TICK_TIMEOUT = 120  # FR-4.3
 CLOCK_PHASES = ["morning", "midday", "afternoon", "evening", "night", "small hours"]
@@ -174,22 +175,39 @@ async def run_tick(rng: random.Random | None = None) -> dict:
 
 
 def start_heartbeat(loop_getter=None):
-    """Wire APScheduler; each run schedules the next at the adaptive interval."""
+    """A light recurring check that ticks when due for the current cadence.
+
+    Polling every CHECK_SECONDS (instead of pre-scheduling one tick at a fixed
+    delay) makes presence changes responsive: the instant a human starts
+    watching, human_active() flips true and — since the last tick is usually
+    long past — the very next check fires a tick. So the café comes alive
+    within seconds of someone opening it, then ticks every FAST_SECONDS.
+    """
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
     scheduler = AsyncIOScheduler()
+    state = {"last": 0.0, "running": False}
 
-    def schedule_next(delay_seconds: int) -> None:
-        scheduler.add_job(beat, "date", run_date=datetime.now() + timedelta(seconds=delay_seconds))
-
-    async def beat() -> None:
+    async def maybe_beat() -> None:
+        if state["running"]:
+            return
+        interval = tick_interval_seconds(presence.human_active())
+        if time.monotonic() - state["last"] < interval:
+            return
+        state["running"] = True
         try:
             await asyncio.wait_for(run_tick(), timeout=GLOBAL_TICK_TIMEOUT + 30)
         except Exception:
             logger.exception("tick crashed; world state is transactional, continuing")
-        schedule_next(tick_interval_seconds(presence.human_active()))
+        finally:
+            state["last"] = time.monotonic()
+            state["running"] = False
 
+    scheduler.add_job(
+        maybe_beat, "interval", seconds=CHECK_SECONDS,
+        next_run_time=datetime.now() + timedelta(seconds=settings.heartbeat_first_delay_seconds),
+    )
     scheduler.start()
-    schedule_next(settings.heartbeat_first_delay_seconds)
-    logger.info("heartbeat armed (first tick in %ss)", settings.heartbeat_first_delay_seconds)
+    logger.info("heartbeat armed (checks every %ss; fast=%ss, idle=%ss)",
+                CHECK_SECONDS, FAST_SECONDS, IDLE_SECONDS)
     return scheduler

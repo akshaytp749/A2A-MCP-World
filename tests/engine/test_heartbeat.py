@@ -15,11 +15,11 @@ NPCS = ["darwin", "ramanujan", "socrates", "tesla", "twain"]
 
 
 def test_interval_fast_when_human_connected():
-    assert tick_interval_seconds(human_active=True) == 600  # 10 min
+    assert tick_interval_seconds(human_active=True) == 90  # lively while watched
 
 
 def test_interval_slow_when_idle():
-    assert tick_interval_seconds(human_active=False) == 2700  # 45 min
+    assert tick_interval_seconds(human_active=False) == 2700  # 45 min, saves quota
 
 
 # ------------------------------------------------------------------ rotation

@@ -88,6 +88,7 @@ async def chat(body: ChatBody) -> dict:
 
 @router.get("/room")
 def room() -> dict:
+    presence.mark()  # just watching the café keeps it lively (fast heartbeat)
     with session_scope() as session:
         world = session.get(World, 1)
         occupants = [

@@ -11,30 +11,24 @@
   :root{
     --bg:#0c0a09; --ink:#f2ece1; --dim:#a89e8d; --faint:#6d6355;
     --gold:#e7b768; --gold-soft:#c99a4e; --green:#8fbf7a; --red:#e0836a;
-    --glass:rgba(28,23,18,.62); --glass-line:rgba(231,183,104,.16);
+    --glass:rgba(28,23,18,.66); --glass-line:rgba(231,183,104,.16);
     --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);
        font-size:15px;line-height:1.55;overflow:hidden;-webkit-font-smoothing:antialiased}
-
-  /* ---- atmospheric backdrop ---- */
   #bg{position:fixed;inset:0;z-index:-2;background:#0c0a09 center/cover no-repeat}
   #bg.loaded{background-image:url('/assets/cafe.jpg')}
   #bg::after{content:'';position:absolute;inset:0;
-    background:radial-gradient(120% 90% at 50% 30%, rgba(12,10,9,.35), rgba(12,10,9,.86) 78%),
-               linear-gradient(180deg, rgba(12,10,9,.5), rgba(12,10,9,.75));
-    backdrop-filter:saturate(1.05)}
-  #grain{position:fixed;inset:0;z-index:-1;opacity:.5;pointer-events:none;
-    background:radial-gradient(circle at 50% 0%, rgba(231,183,104,.05), transparent 60%)}
+    background:radial-gradient(120% 90% at 50% 30%, rgba(12,10,9,.32), rgba(12,10,9,.86) 78%),
+               linear-gradient(180deg, rgba(12,10,9,.5), rgba(12,10,9,.72))}
 
-  /* ---- layout ---- */
-  .app{height:100%;display:grid;grid-template-columns:1fr 400px;grid-template-rows:auto 1fr auto}
+  .app{height:100%;display:grid;grid-template-columns:1fr 410px;grid-template-rows:auto 1fr auto}
   header{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:20px 28px}
   header .brand{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:.5px;
-    color:var(--ink);text-shadow:0 2px 20px rgba(0,0,0,.6)}
-  header .tag{font-size:12.5px;color:var(--dim);letter-spacing:.3px;margin-top:-2px}
+    text-shadow:0 2px 20px rgba(0,0,0,.6)}
+  header .tag{font-size:12.5px;color:var(--dim);margin-top:-2px}
   header .status{margin-left:auto;display:flex;gap:8px}
   .pill{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:100px;
     background:var(--glass);border:1px solid var(--glass-line);font-size:12.5px;color:var(--dim);
@@ -43,129 +37,143 @@
   .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
   .dot.paused{background:var(--red);box-shadow:0 0 8px var(--red)}
 
-  /* ---- stage with character portraits ---- */
-  #stage{grid-column:1;grid-row:2;position:relative;overflow:hidden}
+  #stage{grid-column:1;grid-row:2/4;position:relative;overflow:hidden}
   .avatar{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:9px;
     transition:transform .55s cubic-bezier(.22,1,.36,1);animation:float 7s ease-in-out infinite}
   @keyframes float{0%,100%{translate:0 0}50%{translate:0 -9px}}
-  .avatar .ring{position:relative;width:112px;height:112px;border-radius:50%;padding:3px;
+  .avatar .ring{position:relative;width:110px;height:110px;border-radius:50%;padding:3px;
     background:linear-gradient(160deg, rgba(231,183,104,.55), rgba(231,183,104,.08));
-    box-shadow:0 10px 34px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.05);
-    transition:box-shadow .4s, transform .4s}
+    box-shadow:0 10px 34px rgba(0,0,0,.55);transition:box-shadow .4s}
   .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 22%;
     display:block;background:#1a1512}
-  .avatar .nm{font-family:var(--serif);font-size:15px;color:var(--ink);letter-spacing:.3px;
-    padding:3px 12px;border-radius:100px;background:rgba(12,10,9,.55);border:1px solid var(--glass-line);
-    backdrop-filter:blur(8px);white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+  .avatar .nm{font-family:var(--serif);font-size:15px;padding:3px 12px;border-radius:100px;
+    background:rgba(12,10,9,.55);border:1px solid var(--glass-line);backdrop-filter:blur(8px);
+    white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.7)}
   .avatar:hover{transform:translate(-50%,-50%) scale(1.05);animation-play-state:paused}
   .avatar:hover .ring{box-shadow:0 14px 40px rgba(0,0,0,.6), 0 0 0 2px rgba(231,183,104,.4)}
-  .avatar.sel .ring{box-shadow:0 14px 44px rgba(0,0,0,.6), 0 0 0 3px var(--gold),
-    0 0 28px rgba(231,183,104,.5)}
+  .avatar.sel .ring{box-shadow:0 14px 44px rgba(0,0,0,.6), 0 0 0 3px var(--gold), 0 0 28px rgba(231,183,104,.5)}
   .avatar.sel .nm{color:var(--gold)}
-  .avatar.speaking .ring{animation:pulse 1.8s ease-in-out infinite}
-  @keyframes pulse{0%,100%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 2px rgba(143,191,122,.5)}
-    50%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 4px rgba(143,191,122,.85), 0 0 30px rgba(143,191,122,.5)}}
-  /* speech bubble */
-  .bubble{position:absolute;bottom:128px;left:50%;transform:translateX(-50%);
-    width:max-content;max-width:280px;padding:12px 15px;border-radius:16px;
-    background:rgba(245,240,228,.97);color:#2a2016;font-size:13.5px;line-height:1.5;
-    box-shadow:0 16px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  .avatar.speaking .ring{animation:pulse 1.7s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 2px rgba(143,191,122,.55)}
+    50%{box-shadow:0 12px 38px rgba(0,0,0,.55), 0 0 0 4px rgba(143,191,122,.9), 0 0 30px rgba(143,191,122,.55)}}
+  .bubble{position:absolute;bottom:126px;left:50%;transform:translateX(-50%);width:max-content;
+    max-width:300px;padding:12px 15px;border-radius:16px;background:rgba(245,240,228,.97);color:#2a2016;
+    font-size:13.5px;line-height:1.5;box-shadow:0 16px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;
     transition:opacity .35s, transform .35s;transform-origin:bottom center}
   .bubble.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
   .bubble::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
     border:9px solid transparent;border-top-color:rgba(245,240,228,.97);border-bottom:0}
-  .bubble.emote{font-style:italic;background:rgba(231,183,104,.94);color:#2a2016}
+  .bubble.emote{font-style:italic;background:rgba(231,183,104,.94)}
   .bubble.emote::after{border-top-color:rgba(231,183,104,.94)}
-
-  #seed{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:5;
-    padding:9px 18px;border-radius:100px;background:var(--glass);border:1px solid var(--glass-line);
-    color:var(--gold);font-size:13px;backdrop-filter:blur(14px);opacity:0;
-    transition:opacity .5s;max-width:80%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #seed{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:5;padding:9px 18px;
+    border-radius:100px;background:var(--glass);border:1px solid var(--glass-line);color:var(--gold);
+    font-size:13px;backdrop-filter:blur(14px);opacity:0;transition:opacity .5s;max-width:80%;
+    text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)}
   #seed.show{opacity:1}
 
-  #murmurs{grid-column:1;grid-row:3;padding:12px 28px;display:flex;gap:10px;align-items:center;
-    font-size:12.5px;color:var(--faint);overflow:hidden;white-space:nowrap}
-  #murmurs .m{color:var(--dim)} #murmurs .a{color:var(--gold-soft)}
-
-  /* ---- conversation panel ---- */
   aside{grid-column:2;grid-row:2/4;background:var(--glass);border-left:1px solid var(--glass-line);
     backdrop-filter:blur(22px);display:flex;flex-direction:column;overflow:hidden}
-  .conv-empty{margin:auto;text-align:center;color:var(--dim);padding:40px;max-width:280px}
-  .conv-empty .big{font-family:var(--serif);font-size:20px;color:var(--ink);margin-bottom:8px}
+  /* live room feed (default) */
+  #room{flex:1;display:flex;flex-direction:column;min-height:0}
+  .room-head{display:flex;align-items:center;gap:10px;padding:20px 22px 14px;border-bottom:1px solid var(--glass-line)}
+  .room-head .rh-title{font-family:var(--serif);font-size:19px}
+  .room-head .rh-sub{font-size:12.5px;color:var(--dim)}
+  .live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--green);
+    text-transform:uppercase;letter-spacing:.8px}
+  .live .ld{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.6s infinite}
+  @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 8px var(--green)}50%{opacity:.35;box-shadow:none}}
+  #roomfeed{flex:1;overflow-y:auto;padding:8px 22px;display:flex;flex-direction:column;gap:2px}
+  #roomfeed::-webkit-scrollbar{width:8px}#roomfeed::-webkit-scrollbar-thumb{background:#ffffff14;border-radius:8px}
+  .rf{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);
+    animation:rise .35s cubic-bezier(.22,1,.36,1)}
+  .rf img{width:38px;height:38px;border-radius:50%;object-fit:cover;object-position:50% 20%;flex:none;
+    cursor:pointer;transition:box-shadow .2s}
+  .rf img:hover{box-shadow:0 0 0 2px var(--gold-soft)}
+  .rf .body{min-width:0}
+  .rf .who{font-family:var(--serif);font-size:13.5px;color:var(--gold-soft)}
+  .rf .tx{font-size:13.5px;color:var(--ink);opacity:.92}
+  .rf.emote .tx{font-style:italic;color:var(--dim)}
+  .rf.world .who{color:var(--dim)}
+  .room-hint{padding:14px 22px;border-top:1px solid var(--glass-line);font-size:12.5px;color:var(--faint);text-align:center}
+  .room-quiet{margin:auto;text-align:center;color:var(--dim);padding:40px;max-width:260px}
+  .room-quiet .big{font-family:var(--serif);font-size:19px;color:var(--ink);margin-bottom:6px}
+
+  /* private conversation */
   #conv{flex:1;display:none;flex-direction:column;min-height:0}
-  .conv-head{display:flex;gap:14px;align-items:center;padding:22px 22px 18px;
-    border-bottom:1px solid var(--glass-line)}
-  .conv-head img{width:64px;height:64px;border-radius:16px;object-fit:cover;object-position:50% 20%;
+  .conv-head{display:flex;gap:12px;align-items:center;padding:18px 20px;border-bottom:1px solid var(--glass-line)}
+  .back{width:34px;height:34px;flex:none;border:1px solid var(--glass-line);border-radius:10px;
+    background:rgba(255,255,255,.05);color:var(--ink);cursor:pointer;font-size:16px}
+  .back:hover{background:rgba(255,255,255,.1)}
+  .conv-head img{width:56px;height:56px;border-radius:14px;object-fit:cover;object-position:50% 20%;
     box-shadow:0 6px 20px rgba(0,0,0,.5)}
-  .conv-head .nm{font-family:var(--serif);font-size:21px;color:var(--ink)}
-  .conv-head .era{font-size:12.5px;color:var(--dim);letter-spacing:.3px}
-  #log{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
-  #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:#ffffff14;border-radius:8px}
+  .conv-head .nm{font-family:var(--serif);font-size:20px}
+  .conv-head .era{font-size:12.5px;color:var(--dim)}
+  #log{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:11px}
+  #log::-webkit-scrollbar{width:8px}#log::-webkit-scrollbar-thumb{background:#ffffff14;border-radius:8px}
   .msg{max-width:88%;padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.55;
     animation:rise .3s cubic-bezier(.22,1,.36,1)}
   @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
-  .msg.me{align-self:flex-end;background:linear-gradient(180deg,#3a4d2b,#31411f);color:#e7f2da;
-    border-bottom-right-radius:5px}
-  .msg.npc{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--glass-line);
-    border-bottom-left-radius:5px}
+  .msg.me{align-self:flex-end;background:linear-gradient(180deg,#3a4d2b,#31411f);color:#e7f2da;border-bottom-right-radius:5px}
+  .msg.npc{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--glass-line);border-bottom-left-radius:5px}
   .msg.npc .nm{font-family:var(--serif);font-size:12px;color:var(--gold-soft);margin-bottom:3px}
   .msg.pending{color:var(--dim);font-style:italic}
-  .compose{padding:16px 18px 18px;border-top:1px solid var(--glass-line);display:flex;gap:10px}
+  .name-row{padding:12px 18px 0}.name-row input{width:100%;background:rgba(255,255,255,.05);color:var(--ink);
+    border:1px solid var(--glass-line);border-radius:12px;padding:10px 13px;font:inherit}
+  .name-row input:focus{outline:none;border-color:var(--gold-soft)}
+  .compose{padding:14px 18px 18px;display:flex;gap:10px}
   .compose textarea{flex:1;resize:none;height:46px;background:rgba(255,255,255,.05);color:var(--ink);
     border:1px solid var(--glass-line);border-radius:14px;padding:12px 14px;font:inherit}
   .compose textarea:focus{outline:none;border-color:var(--gold-soft)}
   .compose button{width:46px;border:0;border-radius:14px;cursor:pointer;color:#1a130a;
-    background:linear-gradient(180deg,var(--gold),var(--gold-soft));font-size:18px;transition:filter .2s}
-  .compose button:hover{filter:brightness(1.08)} .compose button:disabled{opacity:.5;cursor:wait}
-  .name-row{padding:0 18px 12px} .name-row input{width:100%;background:rgba(255,255,255,.05);
-    color:var(--ink);border:1px solid var(--glass-line);border-radius:12px;padding:10px 13px;font:inherit}
-  .name-row input:focus{outline:none;border-color:var(--gold-soft)}
+    background:linear-gradient(180deg,var(--gold),var(--gold-soft));font-size:18px}
+  .compose button:disabled{opacity:.5;cursor:wait}
 
-  footer{grid-column:1/3;grid-row:4;padding:9px 28px;font-size:11px;color:var(--faint);
+  footer{grid-column:1/3;grid-row:3;padding:9px 28px;font-size:11px;color:var(--faint);
     display:flex;align-items:center;gap:16px;border-top:1px solid rgba(255,255,255,.04)}
-  footer .disc{margin-right:auto}
-  footer a,footer .op{color:var(--faint);cursor:pointer;text-decoration:none}
-  footer .op:hover{color:var(--dim)}
+  footer .disc{margin-right:auto}.op{cursor:pointer}.op:hover{color:var(--dim)}
   dialog{background:var(--glass);color:var(--ink);border:1px solid var(--glass-line);border-radius:16px;
     backdrop-filter:blur(22px);padding:20px;max-width:340px}
   dialog::backdrop{background:rgba(0,0,0,.55)}
   dialog input,dialog button,dialog select{width:100%;margin-top:8px;padding:10px 12px;border-radius:10px;
     background:rgba(255,255,255,.05);color:var(--ink);border:1px solid var(--glass-line);font:inherit}
   dialog button{cursor:pointer;background:rgba(231,183,104,.18)}
-  @media(max-width:860px){.app{grid-template-columns:1fr}aside{grid-column:1;grid-row:auto;
-    max-height:44vh;border-left:0;border-top:1px solid var(--glass-line)}
-    #stage{grid-row:2;min-height:44vh}#murmurs{display:none}}
+  @media(max-width:880px){.app{grid-template-columns:1fr}aside{grid-column:1;grid-row:auto;max-height:46vh;
+    border-left:0;border-top:1px solid var(--glass-line)}#stage{grid-row:2;min-height:42vh}}
 </style>
 </head>
 <body>
-<div id="bg"></div><div id="grain"></div>
+<div id="bg"></div>
 <div class="app">
   <header>
-    <div>
-      <div class="brand" id="cafe">The Interval</div>
-      <div class="tag">a café that exists between times</div>
-    </div>
+    <div><div class="brand" id="cafe">The Interval</div>
+      <div class="tag">a café that exists between times</div></div>
     <div class="status">
       <span class="pill"><span class="dot" id="dot"></span><span id="clock">…</span></span>
       <span class="pill">tick <b id="tick">—</b></span>
     </div>
   </header>
 
-  <div id="stage">
-    <div id="seed"></div>
-  </div>
-
-  <div id="murmurs"><span>the room is quiet…</span></div>
+  <div id="stage"><div id="seed"></div></div>
 
   <aside>
-    <div class="conv-empty" id="empty">
-      <div class="big">Who will you speak with?</div>
-      <div>Choose a face. They remember you between visits, and the conversation
-           continues on its own even when you leave.</div>
+    <div id="room">
+      <div class="room-head">
+        <div><div class="rh-title">The café, live</div>
+          <div class="rh-sub" id="roomsub">listening in…</div></div>
+        <span class="live"><span class="ld"></span>live</span>
+      </div>
+      <div id="roomfeed">
+        <div class="room-quiet" id="quiet"><div class="big">The room settles…</div>
+          <div>The residents converse on their own. Give it a moment — someone always
+               has something to say. Or click a face to speak with them yourself.</div></div>
+      </div>
+      <div class="room-hint">Click any face to speak with them privately.</div>
     </div>
+
     <div id="conv">
       <div class="conv-head">
+        <button class="back" id="back" title="Back to the room">←</button>
         <img id="chead" alt="">
         <div><div class="nm" id="cname"></div><div class="era" id="cera"></div></div>
       </div>
@@ -187,9 +195,8 @@
 <dialog id="opdlg">
   <div style="font-family:var(--serif);font-size:16px">Operator</div>
   <input id="admtok" type="password" placeholder="admin token">
-  <div style="display:flex;gap:8px">
-    <button onclick="op('pause',true)">Pause</button><button onclick="op('pause',false)">Resume</button>
-  </div>
+  <div style="display:flex;gap:8px"><button onclick="op('pause',true)">Pause</button>
+    <button onclick="op('pause',false)">Resume</button></div>
   <select id="ejectsel"></select><button onclick="op('eject')">Eject selected</button>
   <div id="opstat" style="font-size:12px;color:var(--dim);margin-top:8px;min-height:14px"></div>
   <button onclick="opdlg.close()" style="background:transparent">close</button>
@@ -202,75 +209,74 @@ const ERAS={socrates:'Athens · 5th c. BCE',twain:'Missouri · 1835–1910',
   tesla:'Smiljan · 1856–1943',darwin:'England · 1809–1882',ramanujan:'Madras · 1887–1920'};
 const SPOTS={chalkboard:[17,45],alcove:[31,37],'courtyard-door':[50,35],'window-table':[41,60],
   rug:[56,61],'corner-table':[17,69],bar:[80,50]};
-const portraitURL=id=>`/assets/portraits/${id}.jpg`;
+const pURL=id=>`/assets/portraits/${id}.jpg`;
 $('name').value=localStorage.getItem('interval-name')||'';
-
-let selected=null, avatars=new Map();
-
-/* backdrop load */
+let selected=null, avatars=new Map(), names={};
 { const im=new Image(); im.onload=()=>$('bg').classList.add('loaded'); im.src='/assets/cafe.jpg'; }
 
-/* ---- stage: character portraits ---- */
+/* ---- stage avatars ---- */
 function placeAvatars(occ){
-  const seen=new Set();
-  const bySpot={}; occ.forEach(o=>(bySpot[o.spot]=bySpot[o.spot]||[]).push(o));
-  for(const [spot,list] of Object.entries(bySpot)){
-    list.forEach((o,i)=>{
-      seen.add(o.id);
-      let a=avatars.get(o.id);
-      if(!a){
-        a=document.createElement('div'); a.className='avatar';
-        a.innerHTML=`<div class="bubble"></div><div class="ring"><img src="${portraitURL(o.id)}" alt="${o.name}"></div><div class="nm">${o.name}</div>`;
-        a.onclick=()=>select(o.id,o.name);
-        a.style.animationDelay=(Math.random()*4).toFixed(2)+'s';
-        $('stage').appendChild(a); avatars.set(o.id,{el:a,name:o.name});
-      }
-      const [bx,by]=SPOTS[spot]||SPOTS.bar;
-      const off=list.length>1?(i-(list.length-1)/2)*9:0;
-      a.style.left=(bx+off)+'%'; a.style.top=by+'%';
-    });
-  }
-  for(const [id,a] of [...avatars]) if(!seen.has(id)){ a.el.remove(); avatars.delete(id); }
+  const seen=new Set(), bySpot={};
+  occ.forEach(o=>{names[o.id]=o.name;(bySpot[o.spot]=bySpot[o.spot]||[]).push(o)});
+  for(const [spot,list] of Object.entries(bySpot)) list.forEach((o,i)=>{
+    seen.add(o.id); let a=avatars.get(o.id);
+    if(!a){ const el=document.createElement('div'); el.className='avatar';
+      el.innerHTML=`<div class="bubble"></div><div class="ring"><img src="${pURL(o.id)}" alt="${o.name}"></div><div class="nm">${o.name}</div>`;
+      el.onclick=()=>select(o.id); el.style.animationDelay=(Math.random()*4).toFixed(2)+'s';
+      $('stage').appendChild(el); a={el}; avatars.set(o.id,a); }
+    const [bx,by]=SPOTS[spot]||SPOTS.bar, off=list.length>1?(i-(list.length-1)/2)*9:0;
+    a.el.style.left=(bx+off)+'%'; a.el.style.top=by+'%';
+  });
+  for(const [id,a] of [...avatars]) if(!seen.has(id)){a.el.remove();avatars.delete(id)}
+  $('roomsub').textContent=occ.length+' residents · conversing on their own';
   $('ejectsel').innerHTML=occ.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
 }
-
 function speak(id,text,emote){
   const a=avatars.get(id); if(!a) return;
   a.el.classList.add('speaking');
-  const b=a.el.querySelector('.bubble');
-  b.textContent=(emote?text:text); b.classList.toggle('emote',!!emote); b.classList.add('show');
-  clearTimeout(a.t1); clearTimeout(a.t2);
-  a.t1=setTimeout(()=>b.classList.remove('show'), Math.min(9000,3500+text.length*40));
-  a.t2=setTimeout(()=>a.el.classList.remove('speaking'), Math.min(9000,3500+text.length*40)+400);
+  const b=a.el.querySelector('.bubble'); b.textContent=text; b.classList.toggle('emote',!!emote); b.classList.add('show');
+  const dur=Math.min(9000,3500+text.length*40);
+  clearTimeout(a.t1);clearTimeout(a.t2);
+  a.t1=setTimeout(()=>b.classList.remove('show'),dur);
+  a.t2=setTimeout(()=>a.el.classList.remove('speaking'),dur+400);
 }
 
-/* ---- selection + chat ---- */
-function select(id,name){
+/* ---- live room feed ---- */
+function feed(actor,text,kind){
+  $('quiet')?.remove();
+  const row=document.createElement('div'); row.className='rf '+(kind||'');
+  const nm=names[actor]||actor;
+  const img=kind==='world'?'':`<img src="${pURL(actor)}" onclick="select('${actor}')" alt="">`;
+  row.innerHTML=`${img}<div class="body"><div class="who">${kind==='world'?'the room':nm}</div><div class="tx">${text}</div></div>`;
+  const f=$('roomfeed'); const atBottom=f.scrollHeight-f.scrollTop-f.clientHeight<60;
+  f.appendChild(row); while(f.querySelectorAll('.rf').length>60) f.querySelector('.rf').remove();
+  if(atBottom) f.scrollTop=f.scrollHeight;
+}
+
+/* ---- selection / chat ---- */
+function select(id){
   selected=id;
   for(const [aid,a] of avatars) a.el.classList.toggle('sel',aid===id);
-  $('empty').style.display='none'; $('conv').style.display='flex';
-  $('chead').src=portraitURL(id); $('cname').textContent=name;
-  $('cera').textContent=ERAS[id]||'a guest of the café';
+  $('room').style.display='none'; $('conv').style.display='flex';
+  $('chead').src=pURL(id); $('cname').textContent=names[id]||id; $('cera').textContent=ERAS[id]||'a guest of the café';
   ($('name').value.trim()?$('msg'):$('name')).focus();
 }
-function addMsg(cls,who,text){
-  const d=document.createElement('div'); d.className='msg '+cls;
-  if(who) d.innerHTML=`<div class="nm">${who}</div>`;
-  const s=document.createElement('div'); s.textContent=text; d.appendChild(s);
-  $('log').appendChild(d); $('log').scrollTop=$('log').scrollHeight; return s;
-}
+window.select=select;
+$('back').onclick=()=>{ selected=null; for(const[,a]of avatars)a.el.classList.remove('sel');
+  $('conv').style.display='none'; $('room').style.display='flex'; $('log').innerHTML=''; };
+function addMsg(cls,who,text){ const d=document.createElement('div'); d.className='msg '+cls;
+  if(who)d.innerHTML=`<div class="nm">${who}</div>`; const s=document.createElement('div'); s.textContent=text;
+  d.appendChild(s); $('log').appendChild(d); $('log').scrollTop=$('log').scrollHeight; return s; }
 async function send(){
   const name=$('name').value.trim(), text=$('msg').value.trim();
   if(!name){$('name').focus();return} if(!text||!selected){$('msg').focus();return}
   localStorage.setItem('interval-name',name);
   addMsg('me','',text); $('msg').value=''; $('send').disabled=true;
   const pend=addMsg('npc pending',$('cname').textContent,'…');
-  try{
-    const r=await fetch('/gateway/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+  try{ const r=await fetch('/gateway/chat',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({display_name:name,target:selected,text})});
     const data=await r.json(); const reply=r.ok?data.reply:(data.detail||'…');
-    pend.parentElement.classList.remove('pending'); pend.textContent=reply;
-    speak(selected,reply,false);
+    pend.parentElement.classList.remove('pending'); pend.textContent=reply; speak(selected,reply,false);
   }catch(e){ pend.textContent='the café did not answer.'; }
   $('send').disabled=false; $('msg').focus();
 }
@@ -283,32 +289,27 @@ async function loadRoom(){
   let r; try{ r=await (await fetch('/gateway/room')).json(); }catch{ $('clock').textContent='offline'; return; }
   $('cafe').textContent=r.cafe; $('tick').textContent=r.tick;
   $('clock').textContent=r.clock_time+' · '+r.weather+(r.paused?' · paused':'');
-  $('dot').className='dot'+(r.paused?' paused':'');
-  placeAvatars(r.occupants);
+  $('dot').className='dot'+(r.paused?' paused':''); placeAvatars(r.occupants);
 }
 
-/* ---- live feed ---- */
+/* ---- live feed (SSE) ---- */
 const es=new EventSource('/gateway/events');
-const murmur=[];
-es.onmessage=ev=>{
-  const e=JSON.parse(ev.data);
-  if(e.tool==='say') speak(e.actor,e.text,false);
-  else if(e.tool==='emote') speak(e.actor,e.text,true);
-  else if(e.tool==='event_seed'){ $('seed').textContent=e.text; $('seed').classList.add('show');
+es.onmessage=ev=>{ const e=JSON.parse(ev.data);
+  if(e.tool==='say'){ speak(e.actor,e.text,false); feed(e.actor,e.text); }
+  else if(e.tool==='emote'){ speak(e.actor,e.text,true); feed(e.actor,e.text,'emote'); }
+  else if(e.tool==='event_seed'){ feed('world',e.text,'world');
+    $('seed').textContent=e.text; $('seed').classList.add('show');
     clearTimeout(window._st); window._st=setTimeout(()=>$('seed').classList.remove('show'),11000); }
-  if(e.text){ murmur.unshift(`<span class="a">${e.actor}</span> <span class="m">${e.text}</span>`);
-    murmur.length=Math.min(murmur.length,8); $('murmurs').innerHTML=murmur.slice(0,3).join('&nbsp;&nbsp;·&nbsp;&nbsp;'); }
 };
 
 /* ---- operator ---- */
 $('opbtn').onclick=()=>$('opdlg').showModal();
-async function op(kind,arg){
-  const t=$('admtok').value.trim(); if(!t){$('opstat').textContent='admin token required';return}
+async function op(kind,arg){ const t=$('admtok').value.trim(); if(!t){$('opstat').textContent='admin token required';return}
   const h={'Authorization':'Bearer '+t,'Content-Type':'application/json'};
   const r=kind==='pause'?await fetch('/admin/pause',{method:'POST',headers:h,body:JSON.stringify({paused:arg})})
     :await fetch('/admin/eject/'+$('ejectsel').value,{method:'POST',headers:h});
-  $('opstat').textContent=r.ok?kind+' ✓':kind+' failed ('+r.status+')'; loadRoom();
-}
+  $('opstat').textContent=r.ok?kind+' ✓':kind+' failed ('+r.status+')'; loadRoom(); }
+window.op=op;
 
 loadRoom(); setInterval(loadRoom,6000);
 </script>
