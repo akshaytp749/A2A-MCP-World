@@ -59,8 +59,11 @@ def main() -> int:
     parser.add_argument("--db", default=os.environ.get("DATABASE_URL", "sqlite:///./interval.db"))
     args = parser.parse_args()
 
+    from llm.prompts import managed
+
     personas = load_personas("world/seed/npcs")
     router = LLMRouter()
+    judge_template, judge_prompt = managed("coherence-judge", JUDGE_PROMPT)
     engine = create_engine(args.db)
 
     results = {}
@@ -84,7 +87,7 @@ def main() -> int:
                     .limit(10)
                 )
             )
-            prompt = JUDGE_PROMPT.format(
+            prompt = judge_template.format(
                 persona=json.dumps(
                     {
                         "persona": cfg.persona,
@@ -107,6 +110,7 @@ def main() -> int:
                 prompt=prompt,
                 max_tokens=1200,
                 name="coherence-judge",
+                langfuse_prompt=judge_prompt,
             )
             verdict = _extract_json(text) or {}
             results[npc_id] = {
@@ -136,8 +140,32 @@ def main() -> int:
         )
         session.commit()
 
+    _push_langfuse_scores(consistency, memory_score, results)
     print(f"\nconsistency={consistency:.1f} memory={memory_score:.1f} (target: consistency >= 70)")
     return 0 if consistency >= 70 else 1
+
+
+def _push_langfuse_scores(consistency: float, memory: float, results: dict) -> None:
+    """Record the coherence eval in Langfuse (visible in the Scores view)."""
+    if not os.environ.get("LANGFUSE_PUBLIC_KEY"):
+        return
+    try:
+        from datetime import UTC, datetime
+
+        from langfuse import get_client
+
+        lf = get_client()
+        sid = "eval-" + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        lf.create_score(name="persona_consistency", value=float(consistency),
+                        session_id=sid, data_type="NUMERIC")
+        lf.create_score(name="memory_accuracy", value=float(memory),
+                        session_id=sid, data_type="NUMERIC")
+        for npc_id, r in results.items():
+            lf.create_score(name="persona_consistency", value=float(r["persona"]),
+                            session_id=sid, comment=f"{npc_id}: {r['notes']}", data_type="NUMERIC")
+        lf.flush()
+    except Exception:
+        pass  # observability must never fail the eval
 
 
 if __name__ == "__main__":

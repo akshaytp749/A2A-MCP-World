@@ -189,3 +189,16 @@ def test_provider_model_overridable_via_env(monkeypatch):
     from llm.router import provider_rungs
 
     assert provider_rungs() == ["groq:llama-3.1-8b-instant"]
+
+
+# ------------------------------------------------------- prompt management
+
+
+def test_managed_prompt_falls_back_without_langfuse(monkeypatch):
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    import importlib
+
+    import llm.prompts as p
+    importlib.reload(p)  # re-evaluate _ENABLED with no key
+    text, client = p.managed("whatever", "THE FALLBACK TEXT")
+    assert text == "THE FALLBACK TEXT" and client is None

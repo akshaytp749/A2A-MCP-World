@@ -95,7 +95,10 @@ def build_system_prompt(config: NpcConfig, plan_schema: bool = True) -> str:
     if config.hard_lines:
         parts.append("Hard lines (non-negotiable): " + " | ".join(config.hard_lines))
     if plan_schema:
-        parts.append(PLAN_SCHEMA)
+        from llm.prompts import managed
+
+        schema, _ = managed("npc-plan-schema", PLAN_SCHEMA)  # Langfuse-managed, else in-code
+        parts.append(schema)
     return "\n\n".join(parts)
 
 
@@ -150,6 +153,11 @@ class Mind:
         # storms. A gap of >1 tick lapses the run and resets the count.
         self._pair: dict[str, list[int]] = {}  # peer id -> [last_tick, count]
         self._writes_since_summary = 0  # FR-2.4 memory-compaction counter
+        # Langfuse prompt client for the plan schema (links decide generations
+        # to the managed prompt version); None when Langfuse is off.
+        from llm.prompts import managed
+
+        _, self._plan_prompt = managed("npc-plan-schema", PLAN_SCHEMA)
 
     # ------------------------------------------------------------------ perceive
 
@@ -186,6 +194,7 @@ class Mind:
             prompt=prompt,
             max_tokens=DECIDE_MAX_TOKENS,
             name="decide",
+            langfuse_prompt=self._plan_prompt,
         )
         plan = _extract_json(text) if text is not None else None
         if plan is None and text is not None:

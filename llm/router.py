@@ -226,6 +226,7 @@ class LLMRouter:
         system: str = "",
         max_tokens: int = 512,
         name: str = "decide",
+        langfuse_prompt=None,
     ) -> str:
         if tier not in TIER_MODELS:
             raise ValueError(f"unknown tier '{tier}' (know: {sorted(TIER_MODELS)})")
@@ -236,7 +237,8 @@ class LLMRouter:
         for model in chain:
             span = None
             if self._langfuse_enabled:
-                span = self._start_span(name, model, agent_id, tick, tier, system, prompt)
+                span = self._start_span(name, model, agent_id, tick, tier, system, prompt,
+                                        langfuse_prompt)
             try:
                 result = self._generate(
                     model=model, system=system, prompt=prompt, max_tokens=max_tokens
@@ -259,16 +261,20 @@ class LLMRouter:
         raise last_exc
 
     @staticmethod
-    def _start_span(name, model, agent_id, tick, tier, system, prompt):
+    def _start_span(name, model, agent_id, tick, tier, system, prompt, langfuse_prompt=None):
         try:
             from langfuse import get_client
 
+            kwargs = {}
+            if langfuse_prompt is not None:  # links generation → managed prompt version
+                kwargs["prompt"] = langfuse_prompt
             return get_client().start_observation(
                 name=name,
                 as_type="generation",
                 model=model,
                 input={"system": system, "prompt": prompt},
                 metadata={"agent_id": agent_id, "tick": tick, "tier": tier},
+                **kwargs,
             )
         except Exception:
             return None  # tracing must never break the world
