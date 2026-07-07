@@ -29,12 +29,15 @@ FACES = {
                 "simple undyed woolen robe",
     "twain": "Mark Twain, about 70, wild swept-back white hair, thick bushy white "
              "walrus mustache, cream linen suit with black bow tie, wry amused warm eyes",
-    "tesla": "Nikola Tesla, about 40, lean face, neat dark side-parted hair, thin dark "
-             "mustache, intense visionary eyes, elegant black suit with white wing collar",
+    "tesla": "Nikola Tesla about 40, based on his real photograph: lean angular face, "
+             "high cheekbones, dark hair parted sharply in the CENTRE and slicked flat, "
+             "thin dark mustache, deep-set intense eyes, black frock coat, white shirt",
     "darwin": "Charles Darwin, about 65, long full white beard, bald crown with white "
               "side hair, heavy brow, gentle wise melancholy eyes, dark Victorian coat",
-    "ramanujan": "Srinivasa Ramanujan, about 30, South Indian mathematician, warm brown "
-                 "skin, dark neatly combed hair, gentle shy luminous eyes, cream kurta",
+    "ramanujan": "Srinivasa Ramanujan, YOUNG man aged about 30, based on his real "
+                 "photograph: full round youthful clean-shaven face, short dark hair "
+                 "combed back, warm brown skin, large gentle earnest eyes, plain white "
+                 "collared shirt, humble and boyish",
     "visitor": "a friendly timeless traveler, about 30, short tidy hair, warm curious "
                "open expression, simple navy collared coat",
 }
