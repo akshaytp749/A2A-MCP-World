@@ -97,9 +97,10 @@ def build_mcp() -> FastMCP:
     def recall_events(since_tick: int = 0, ctx: Context = None) -> dict:
         return _call(ctx, "recall_events", {"since_tick": since_tick})
 
-    @mcp.tool(description="Store a memory (your own memory only).")
-    def remember(content: str, salience: float = 0.5, ctx: Context = None) -> dict:
-        return _call(ctx, "remember", {"content": content, "salience": salience})
+    @mcp.tool(description="Store a memory of your own. kind: 'episodic' or 'summary'.")
+    def remember(content: str, salience: float = 0.5, kind: str = "episodic",
+                 ctx: Context = None) -> dict:
+        return _call(ctx, "remember", {"content": content, "salience": salience, "kind": kind})
 
     @mcp.tool(description="Search your own memories.")
     def recall(query: str, k: int = 5, ctx: Context = None) -> dict:

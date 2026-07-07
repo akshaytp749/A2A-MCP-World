@@ -25,6 +25,7 @@ MAX_ACTIONS = 3  # FR-2.3
 MAX_REPLIES = 2  # replies emitted per tick
 PAIR_CAP = 4  # FR-3.4: consecutive back-and-forths to one peer before going quiet
 MAX_MEMORIES = 3
+COMPACT_EVERY = 30  # FR-2.4: after this many new memories, roll them into a summary
 # Reasoning models (gpt-oss) spend hidden reasoning tokens from the same
 # completion budget — a tight cap truncates the JSON plan mid-string.
 DECIDE_MAX_TOKENS = 1600
@@ -148,6 +149,7 @@ class Mind:
         # stops replying to that peer, breaking two-agent lock-in and tick
         # storms. A gap of >1 tick lapses the run and resets the count.
         self._pair: dict[str, list[int]] = {}  # peer id -> [last_tick, count]
+        self._writes_since_summary = 0  # FR-2.4 memory-compaction counter
 
     # ------------------------------------------------------------------ perceive
 
@@ -205,14 +207,14 @@ class Mind:
                 )
         return plan or {"thought": "", "actions": [], "replies": [], "new_memories": []}
 
-    def _generate_or_none(self, tick: int, **kw) -> str | None:
+    def _generate_or_none(self, tick: int, tier: str | None = None, **kw) -> str | None:
         """A quota hiccup or provider outage makes a quiet turn, not a crash.
 
         Budget violations included: an NPC over its ceiling sits this one out.
         """
         try:
             return self.router.generate(
-                tier=self.config.model_tier, agent_id=self.config.id, tick=tick, **kw
+                tier=tier or self.config.model_tier, agent_id=self.config.id, tick=tick, **kw
             )
         except Exception as exc:
             logger.warning(
@@ -293,7 +295,38 @@ class Mind:
             salience = min(1.0, max(0.0, float(mem.get("salience", 0.5))))
             await self.engine.call("remember", {"content": content, "salience": salience})
             n += 1
+        self._writes_since_summary += n
         return n
+
+    async def _maybe_compact(self, tick: int) -> bool:
+        """Every COMPACT_EVERY memories, roll the salient ones into one durable
+        summary memory (FR-2.4). Raw episodics are kept — this adds a rollup,
+        mirroring the append-only choice for the event log. One cheap LLM call.
+        """
+        if self._writes_since_summary < COMPACT_EVERY:
+            return False
+        self._writes_since_summary = 0
+        mems = (await self.engine.call("recall", {"query": "", "k": 20})).get("memories", [])
+        if len(mems) < COMPACT_EVERY // 2:
+            return False
+        text = self._generate_or_none(
+            tick,
+            tier="cheap",
+            system=(
+                "You are consolidating your own memories. Summarize the following into "
+                "2-3 durable first-person sentences, in character. Return only the summary."
+            ),
+            prompt=json.dumps([m.get("content", "") for m in mems], ensure_ascii=False),
+            max_tokens=300,
+            name="compact",
+        )
+        if not text:
+            return False
+        await self.engine.call(
+            "remember",
+            {"content": "[recollection] " + text.strip(), "salience": 0.85, "kind": "summary"},
+        )
+        return True
 
     # ----------------------------------------------------------------- visitors
 
@@ -351,6 +384,7 @@ class Mind:
         outcomes = await self._act(tick, plan)
         sent = await self._converse(tick, plan)
         remembered = await self._remember(plan)
+        compacted = await self._maybe_compact(tick)
         return {
             "npc": self.config.id,
             "tick": tick,
@@ -358,4 +392,5 @@ class Mind:
             "actions": outcomes,
             "replied_to": sent,
             "memories_written": remembered,
+            "compacted": compacted,
         }

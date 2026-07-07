@@ -205,3 +205,25 @@ async def test_pair_cap_resets_after_a_lull():
     await mind.run_tick(2, [])  # 2 exchanges
     await mind.run_tick(20, [])  # big gap -> fresh run
     assert sent[-1] == ("http://tesla.local", "hello again")  # allowed again
+
+
+async def test_memory_compaction_writes_a_summary():
+    from npc.mind import COMPACT_EVERY
+
+    class ManyMemsEngine(FakeEngine):
+        async def call(self, tool, args):
+            if tool == "recall":
+                return {"ok": True, "memories": [{"content": f"m{i}"} for i in range(20)]}
+            return await super().call(tool, args)
+
+    engine = ManyMemsEngine()
+    # plan writes 3 memories per tick; after COMPACT_EVERY writes -> a summary
+    model = PlanModel(plan_json(new_memories=[{"content": "a", "salience": 0.5},
+                                              {"content": "b", "salience": 0.5},
+                                              {"content": "c", "salience": 0.5}]))
+    mind = make_mind(engine, model)
+    for t in range(1, COMPACT_EVERY // 3 + 2):
+        await mind.run_tick(t, [])
+    summaries = [a for t, a in engine.calls if t == "remember" and a.get("kind") == "summary"]
+    assert len(summaries) >= 1
+    assert summaries[0]["content"].startswith("[recollection]")

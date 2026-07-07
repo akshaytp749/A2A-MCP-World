@@ -238,11 +238,13 @@ def _recall_events(session: Session, actor_id: str, args: dict) -> dict:
 
 
 def _remember(session: Session, actor_id: str, tick: int, args: dict) -> dict:
+    kind = str(args.get("kind", "episodic"))
     mem = Memory(
         agent_id=actor_id,
         tick=tick,
         content=str(args["content"]),
         salience=float(args.get("salience", 0.5)),
+        kind=kind if kind in ("episodic", "summary") else "episodic",
     )
     session.add(mem)
     session.flush()
