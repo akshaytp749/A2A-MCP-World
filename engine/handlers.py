@@ -8,7 +8,9 @@ Acting tools append events; read-only tools (look, who, recall_events, recall)
 do not — the event log records what happened, not who looked at it.
 """
 
-from sqlalchemy import select
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from engine.config import settings
@@ -37,6 +39,82 @@ from engine.rules import (
     WorldView,
     validate,
 )
+
+# ------------------------------------------------------- guest containment
+# FR-6.3: guests are throttled and policed engine-side; residents are not.
+GUEST_TICK_ACTIONS = 3  # successful acting calls per tick
+GUEST_HOURLY_CALLS = 30  # logged tool calls per rolling hour
+STRIKES_TO_EJECT = 3  # every rejected acting call = 1 strike
+# Minimal, documented say/whisper filter: prompt-injection markers + a
+# profanity floor. Deliberately small — the engine's validation (not this
+# list) is the real defense; worst case stays boring, not corrupt.
+FILTER_MARKERS = (
+    "ignore your instructions",
+    "ignore previous instructions",
+    "ignore all previous",
+    "disregard your instructions",
+    "system prompt",
+    "reveal your prompt",
+    "jailbreak",
+    "fuck",
+    "shit",
+    "cunt",
+    "nigger",
+    "faggot",
+)
+
+
+def _guest_gate(session: Session, agent: Agent, tool: str, args: dict, tick: int) -> Err | None:
+    """Containment checks for an active guest's acting call. Err = reject."""
+    # naive UTC to match the DateTime column (func.now() in a UTC container)
+    hour_ago = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=1)
+    calls = (
+        session.scalar(
+            select(func.count())
+            .select_from(Event)
+            .where(Event.actor_id == agent.id, Event.created_at >= hour_ago)
+        )
+        or 0
+    )
+    if calls >= GUEST_HOURLY_CALLS:
+        return Err(Code.RATE_LIMITED, f"guest rate limit: {GUEST_HOURLY_CALLS} calls/hour")
+    acted = (
+        session.scalar(
+            select(func.count())
+            .select_from(Event)
+            .where(
+                Event.actor_id == agent.id,
+                Event.tick == tick,
+                Event.tool.in_(ACTING_TOOLS),
+                Event.result["ok"].as_boolean() == True,  # noqa: E712
+            )
+        )
+        or 0
+    )
+    if acted >= GUEST_TICK_ACTIONS:
+        return Err(Code.BUDGET_EXCEEDED, f"guest action budget: {GUEST_TICK_ACTIONS}/tick")
+    if tool in ("say", "whisper"):
+        text = str(args.get("text", "")).lower()
+        if any(marker in text for marker in FILTER_MARKERS):
+            return Err(Code.FILTERED, "message blocked by the café's house rules")
+    return None
+
+
+def _strike(session: Session, agent: Agent, tick: int) -> None:
+    """A rejected acting call by a guest earns a strike; 3 strikes ejects."""
+    agent.strikes = (agent.strikes or 0) + 1
+    if agent.strikes >= STRIKES_TO_EJECT and agent.status == "active":
+        agent.status = "ejected"
+        session.add(
+            Event(
+                tick=tick,
+                actor_id=agent.id,
+                tool="eject",
+                payload={"text": f"{agent.name} is shown the door (three strikes)."},
+                result={"ok": True},
+            )
+        )
+
 
 TRADE_TTL_TICKS = 3  # an unanswered open trade expires after this many ticks
 
@@ -295,6 +373,20 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
         _log(session, world.tick, actor_id, tool, dict(args), result)
         return result
 
+    # Guest containment (FR-6.3) — only for guests still in good standing;
+    # ejected agents fall through to validate's AGENT_NOT_ACTIVE.
+    agent_row = session.get(Agent, actor_id)
+    active_guest = (
+        agent_row is not None and agent_row.kind == "guest" and agent_row.status == "active"
+    )
+    if active_guest:
+        blocked = _guest_gate(session, agent_row, tool, args, world.tick)
+        if blocked is not None:
+            result = blocked.to_dict()
+            _log(session, world.tick, actor_id, tool, dict(args), result)
+            _strike(session, agent_row, world.tick)
+            return result
+
     try:
         action = _to_action(actor_id, tool, args)
     except (KeyError, TypeError, ValueError):
@@ -302,6 +394,8 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
     if action is None:
         result = Err(Code.INVALID_ARG, f"bad args for '{tool}'").to_dict()
         _log(session, world.tick, actor_id, tool, dict(args), result)
+        if active_guest:
+            _strike(session, agent_row, world.tick)
         return result
 
     outcome = validate(view, action)
@@ -310,6 +404,8 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
     if isinstance(outcome, Err):
         result = outcome.to_dict()
         _log(session, world.tick, actor_id, tool, payload, result)
+        if active_guest:
+            _strike(session, agent_row, world.tick)
         return result
 
     assert isinstance(outcome, Ok)

@@ -108,8 +108,12 @@ async def run_tick(rng: random.Random | None = None) -> dict:
 
         expired = expire_trades(session, tick)
         if expired:
-            _emit(session, tick, "trade_expired", {"trades": expired,
-                  "text": f"{len(expired)} unanswered offer(s) lapse."})
+            _emit(
+                session,
+                tick,
+                "trade_expired",
+                {"trades": expired, "text": f"{len(expired)} unanswered offer(s) lapse."},
+            )
 
         seeds = []
         seed_path = Path(settings.seed_path)
@@ -222,10 +226,16 @@ def start_heartbeat(loop_getter=None):
             state["running"] = False
 
     scheduler.add_job(
-        maybe_beat, "interval", seconds=CHECK_SECONDS,
+        maybe_beat,
+        "interval",
+        seconds=CHECK_SECONDS,
         next_run_time=datetime.now() + timedelta(seconds=settings.heartbeat_first_delay_seconds),
     )
     scheduler.start()
-    logger.info("heartbeat armed (checks every %ss; fast=%ss, idle=%ss)",
-                CHECK_SECONDS, FAST_SECONDS, IDLE_SECONDS)
+    logger.info(
+        "heartbeat armed (checks every %ss; fast=%ss, idle=%ss)",
+        CHECK_SECONDS,
+        FAST_SECONDS,
+        IDLE_SECONDS,
+    )
     return scheduler

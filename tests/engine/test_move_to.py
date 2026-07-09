@@ -90,15 +90,31 @@ def test_expire_trades_marks_stale_open_offers(session):
     from engine.handlers import expire_trades
     from engine.models import Trade
 
-    session.add(Trade(id=1, proposer_id="twain", target_id="tesla",
-                      offer={"coins": 1, "items": []}, ask={"coins": 0, "items": []},
-                      status="open", tick_opened=1))
-    session.add(Trade(id=2, proposer_id="twain", target_id="tesla",
-                      offer={"coins": 1, "items": []}, ask={"coins": 0, "items": []},
-                      status="open", tick_opened=6))
+    session.add(
+        Trade(
+            id=1,
+            proposer_id="twain",
+            target_id="tesla",
+            offer={"coins": 1, "items": []},
+            ask={"coins": 0, "items": []},
+            status="open",
+            tick_opened=1,
+        )
+    )
+    session.add(
+        Trade(
+            id=2,
+            proposer_id="twain",
+            target_id="tesla",
+            offer={"coins": 1, "items": []},
+            ask={"coins": 0, "items": []},
+            status="open",
+            tick_opened=6,
+        )
+    )
     session.commit()
-    expired = expire_trades(session, tick=5, ttl=3)   # trade 1 is 4 ticks old
+    expired = expire_trades(session, tick=5, ttl=3)  # trade 1 is 4 ticks old
     session.commit()
     assert expired == [1]
     assert session.get(Trade, 1).status == "expired"
-    assert session.get(Trade, 2).status == "open"     # only 0 ticks -> still open
+    assert session.get(Trade, 2).status == "open"  # only 0 ticks -> still open

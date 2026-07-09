@@ -75,6 +75,7 @@ def test_seed_roll_deterministic_with_seeded_rng():
 
 def test_clock_phase_tracks_real_hours():
     from engine.heartbeat import clock_phase_for
+
     assert clock_phase_for(2) == "small hours"
     assert clock_phase_for(6) == "morning"
     assert clock_phase_for(10) == "midday"

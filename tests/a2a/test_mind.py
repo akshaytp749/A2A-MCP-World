@@ -185,12 +185,13 @@ async def test_llm_outage_makes_quiet_turn_not_crash():
 
 async def test_pair_cap_stops_after_four_consecutive(monkeypatch):
     from npc.mind import PAIR_CAP
+
     engine = FakeEngine()
     sent: list = []
     # a plan that always tries to reply to tesla
     model = PlanModel(plan_json(replies=[{"to": "tesla", "text": "and another thing"}]))
     mind = make_mind(engine, model, sent=sent)
-    for tick in range(1, 9):                       # consecutive ticks
+    for tick in range(1, 9):  # consecutive ticks
         await mind.run_tick(tick, [])
     # only PAIR_CAP replies to tesla get through; the rest are withheld
     assert len(sent) == PAIR_CAP
@@ -218,9 +219,15 @@ async def test_memory_compaction_writes_a_summary():
 
     engine = ManyMemsEngine()
     # plan writes 3 memories per tick; after COMPACT_EVERY writes -> a summary
-    model = PlanModel(plan_json(new_memories=[{"content": "a", "salience": 0.5},
-                                              {"content": "b", "salience": 0.5},
-                                              {"content": "c", "salience": 0.5}]))
+    model = PlanModel(
+        plan_json(
+            new_memories=[
+                {"content": "a", "salience": 0.5},
+                {"content": "b", "salience": 0.5},
+                {"content": "c", "salience": 0.5},
+            ]
+        )
+    )
     mind = make_mind(engine, model)
     for t in range(1, COMPACT_EVERY // 3 + 2):
         await mind.run_tick(t, [])
