@@ -207,27 +207,38 @@
 const $=id=>document.getElementById(id);
 const ERAS={socrates:'Athens · 5th c. BCE',twain:'Missouri · 1835–1910',
   tesla:'Smiljan · 1856–1943',darwin:'England · 1809–1882',ramanujan:'Madras · 1887–1920'};
-const SPOTS={chalkboard:[17,45],alcove:[31,37],'courtyard-door':[50,35],'window-table':[41,60],
-  rug:[56,61],'corner-table':[17,69],bar:[80,50]};
 const pURL=id=>`/assets/portraits/${id}.jpg`;
 $('name').value=localStorage.getItem('interval-name')||'';
 let selected=null, avatars=new Map(), names={};
 { const im=new Image(); im.onload=()=>$('bg').classList.add('loaded'); im.src='/assets/cafe.jpg'; }
 
-/* ---- stage avatars ---- */
+/* ---- stage avatars ----
+   Faces are distributed evenly across the stage regardless of their café spot
+   (five people CAN crowd the chalkboard in-world; the layout must never clip
+   or overlap because of it). The spot is shown as a caption on the name pill. */
+const SPOT_LABEL={chalkboard:'at the chalkboard',alcove:'in the alcove',
+  'courtyard-door':'by the courtyard doors','window-table':'at the window table',
+  rug:'on the hearth rug','corner-table':'at the corner table',bar:'at the bar'};
 function placeAvatars(occ){
-  const seen=new Set(), bySpot={};
-  occ.forEach(o=>{names[o.id]=o.name;(bySpot[o.spot]=bySpot[o.spot]||[]).push(o)});
-  for(const [spot,list] of Object.entries(bySpot)) list.forEach((o,i)=>{
-    seen.add(o.id); let a=avatars.get(o.id);
-    if(!a){ const el=document.createElement('div'); el.className='avatar';
+  const seen=new Set();
+  const list=[...occ].sort((a,b)=>a.id<b.id?-1:1);  // stable order across polls
+  list.forEach((o,i)=>{
+    names[o.id]=o.name; seen.add(o.id);
+    let a=avatars.get(o.id);
+    if(!a||!a.el){
+      const el=document.createElement('div'); el.className='avatar';
       el.innerHTML=`<div class="bubble"></div><div class="ring"><img src="${pURL(o.id)}" alt="${o.name}"></div><div class="nm">${o.name}</div>`;
       el.onclick=()=>select(o.id); el.style.animationDelay=(Math.random()*4).toFixed(2)+'s';
-      $('stage').appendChild(el); a={el}; avatars.set(o.id,a); }
-    const [bx,by]=SPOTS[spot]||SPOTS.bar, off=list.length>1?(i-(list.length-1)/2)*9:0;
-    a.el.style.left=(bx+off)+'%'; a.el.style.top=by+'%';
+      $('stage').appendChild(el); a={el}; avatars.set(o.id,a);
+    }
+    const n=list.length;
+    const x=n===1?50:(14+72*i/(n-1));               // even spread, 14%..86%
+    const y=44+(i%2)*18;                            // gentle two-row stagger
+    a.el.style.left=x+'%'; a.el.style.top=y+'%';
+    const nm=a.el.querySelector('.nm');
+    if(nm) nm.innerHTML=`${o.name}<span style="opacity:.55;font-size:11px"> · ${SPOT_LABEL[o.spot]||o.spot}</span>`;
   });
-  for(const [id,a] of [...avatars]) if(!seen.has(id)){a.el.remove();avatars.delete(id)}
+  for(const [id,a] of [...avatars]) if(!seen.has(id)){a.el?.remove();avatars.delete(id)}
   $('roomsub').textContent=occ.length+' residents · conversing on their own';
   $('ejectsel').innerHTML=occ.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
 }

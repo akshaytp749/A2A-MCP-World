@@ -172,16 +172,42 @@ class _EventBroadcaster:
 _broadcaster = _EventBroadcaster()
 
 
+BACKLOG_ROWS = 12
+
+
+def _recent_public_events(limit: int = BACKLOG_ROWS) -> list[dict]:
+    """Last few public happenings, oldest first — so a new client's feed isn't empty."""
+    with session_scope() as session:
+        rows = []
+        for e in session.scalars(select(Event).order_by(Event.id.desc()).limit(limit * 4)):
+            if e.tool not in FEED_TOOLS or not e.result.get("ok"):
+                continue
+            rows.append({"id": e.id, "tick": e.tick, "actor": e.actor_id,
+                         "tool": e.tool, "text": str(e.payload.get("text", ""))})
+            if len(rows) >= limit:
+                break
+    return list(reversed(rows))
+
+
 @router.get("/events")
 async def events_stream():
-    """SSE feed of public room happenings — streamed from NOW (whispers stay private)."""
+    """SSE feed of public room happenings (whispers stay private).
+
+    Starts with a short backlog of recent conversation, then streams live.
+    """
     q = _broadcaster.subscribe()
+    backlog = _recent_public_events()
+    last_backlog_id = backlog[-1]["id"] if backlog else 0
 
     async def stream():
         try:
+            for row in backlog:
+                yield f"data: {json.dumps(row, ensure_ascii=False)}\n\n"
             while True:
                 try:
                     row = await asyncio.wait_for(q.get(), timeout=15)
+                    if row["id"] <= last_backlog_id:
+                        continue  # already sent in the backlog
                     yield f"data: {json.dumps(row, ensure_ascii=False)}\n\n"
                 except TimeoutError:
                     yield ": keepalive\n\n"
