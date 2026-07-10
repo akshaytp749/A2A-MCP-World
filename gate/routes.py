@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from engine.auth import hash_token, new_token
 from engine.db import session_scope
-from engine.models import Agent, Event, World
+from engine.handlers import admit_guest
 from gate.probes import card_schema_ok, portrayal_ok, run_probes, slugify_guest
 
 logger = logging.getLogger("gate")
@@ -59,50 +59,22 @@ async def register(body: Register) -> dict:
     if schema_err:  # belt and suspenders
         raise HTTPException(status_code=422, detail={"stage": "schema", "reason": schema_err})
 
+    # 3. Admission itself is an engine-owned write (hard rule 1: gate/ never
+    # touches world state) — the gate only decided the guest may enter.
     guest_id = slugify_guest(body.figure)
     token = new_token()
     with session_scope() as session:
-        existing = session.get(Agent, guest_id)
-        if existing is not None and existing.status != "ejected":
-            raise HTTPException(status_code=409, detail=f"'{guest_id}' is already in the café")
-        world = session.get(World, 1)
-        tick = world.tick if world else 0
-        name = str(card.get("name") or body.figure)
-        if existing is None:
-            session.add(
-                Agent(
-                    id=guest_id,
-                    kind="guest",
-                    name=name,
-                    coins=10,
-                    endpoint_url=base,
-                    token_hash=hash_token(token),
-                    status="active",
-                    strikes=0,
-                    card_json=card,
-                    persona_ref=body.figure,
-                    spot="courtyard-door",
-                )
-            )
-        else:  # a previously-ejected guest re-applying and passing again
-            existing.status = "active"
-            existing.strikes = 0
-            existing.token_hash = hash_token(token)
-            existing.endpoint_url = base
-            existing.card_json = card
-            existing.spot = "courtyard-door"
-        session.add(
-            Event(
-                tick=tick,
-                actor_id=guest_id,
-                tool="arrival",
-                payload={
-                    "text": f"{name} steps in from the courtyard.",
-                    "figure": body.figure,
-                    "probes": report.checks,
-                },
-                result={"ok": True},
-            )
+        err = admit_guest(
+            session,
+            guest_id=guest_id,
+            name=str(card.get("name") or body.figure),
+            figure=body.figure,
+            endpoint_url=base,
+            token_hash=hash_token(token),
+            card=card,
+            probes=report.checks,
         )
+        if err is not None:
+            raise HTTPException(status_code=409, detail=err.msg)
     logger.info("admitted guest %s (%s)", guest_id, body.figure)
     return {"ok": True, "guest_id": guest_id, "token": token, "scorecard": report.checks}

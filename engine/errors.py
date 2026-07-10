@@ -25,6 +25,7 @@ class Code:
     FILTERED = "FILTERED"
     INVALID_ARG = "INVALID_ARG"
     UNAUTHORIZED = "UNAUTHORIZED"
+    CONFLICT = "CONFLICT"
 
 
 @dataclass(frozen=True)

@@ -117,6 +117,66 @@ def _strike(session: Session, agent: Agent, tick: int) -> None:
         )
 
 
+def admit_guest(
+    session: Session,
+    *,
+    guest_id: str,
+    name: str,
+    figure: str,
+    endpoint_url: str,
+    token_hash: str,
+    card: dict,
+    probes: dict,
+) -> Err | None:
+    """Admit a gate-passed guest: create/reactivate its agent row + arrival event.
+
+    Lives in the engine because gate/ must never write world state (hard rule 1):
+    the gate decides WHO gets in; the engine performs the admission.
+    """
+    existing = session.get(Agent, guest_id)
+    if existing is not None and existing.status != "ejected":
+        return Err(Code.CONFLICT, f"'{guest_id}' is already in the café")
+    world = session.get(World, 1)
+    tick = world.tick if world else 0
+    if existing is None:
+        session.add(
+            Agent(
+                id=guest_id,
+                kind="guest",
+                name=name,
+                coins=10,
+                endpoint_url=endpoint_url,
+                token_hash=token_hash,
+                status="active",
+                strikes=0,
+                card_json=card,
+                persona_ref=figure,
+                spot="courtyard-door",
+            )
+        )
+    else:  # a previously-ejected guest re-applying and passing again
+        existing.status = "active"
+        existing.strikes = 0
+        existing.token_hash = token_hash
+        existing.endpoint_url = endpoint_url
+        existing.card_json = card
+        existing.spot = "courtyard-door"
+    session.add(
+        Event(
+            tick=tick,
+            actor_id=guest_id,
+            tool="arrival",
+            payload={
+                "text": f"{name} steps in from the courtyard.",
+                "figure": figure,
+                "probes": probes,
+            },
+            result={"ok": True},
+        )
+    )
+    return None
+
+
 TRADE_TTL_TICKS = 3  # an unanswered open trade expires after this many ticks
 
 
