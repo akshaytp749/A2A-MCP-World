@@ -78,6 +78,44 @@ def test_resident_say_not_filtered(session):
     assert res["ok"] is True
 
 
+def test_guest_remember_hits_hourly_rate_limit(session):
+    # remember WRITES state (a memories row), so containment must see it —
+    # a guest at its hourly cap can't keep writing memories.
+    for i in range(30):
+        session.add(
+            Event(tick=i % 5, actor_id="guest-bard", tool="say", payload={}, result={"ok": True})
+        )
+    session.commit()
+    res = execute(session, "guest-bard", "remember", {"content": "a note"})
+    assert res["ok"] is False and res["code"] == Code.RATE_LIMITED
+
+
+def test_guest_remember_calls_are_logged(session):
+    # each remember appends an event row; without this the hourly limit
+    # could never see (or stop) a memory-writing flood.
+    assert execute(session, "guest-bard", "remember", {"content": "a note"})["ok"] is True
+    rows = list(
+        session.scalars(
+            select(Event).where(Event.actor_id == "guest-bard", Event.tool == "remember")
+        )
+    )
+    assert len(rows) == 1
+
+
+def test_remember_event_stays_private(session):
+    # memory content must not leak to other agents via recall_events (hard rule 4)
+    execute(session, "guest-bard", "remember", {"content": "my secret plan"})
+    seen = execute(session, "twain", "recall_events", {"since_tick": 0})
+    assert all("my secret plan" not in str(e["payload"]) for e in seen["events"])
+    mine = execute(session, "guest-bard", "recall_events", {"since_tick": 0})
+    assert any(e["tool"] == "remember" for e in mine["events"])
+
+
+def test_remember_bad_args_do_not_raise(session):
+    res = execute(session, "guest-bard", "remember", {})
+    assert res["ok"] is False and res["code"] == Code.INVALID_ARG
+
+
 def test_three_strikes_auto_ejects_within_a_tick(session):
     for _ in range(3):  # three invalid acting calls: give an item that doesn't exist
         execute(session, "guest-bard", "give", {"target": "twain", "item_id": 999})
