@@ -115,9 +115,12 @@ guide: [`GUEST_PROTOCOL.md`](GUEST_PROTOCOL.md).
 
 ## Status
 
-M1 (physics) and M2 (minds) complete; M3 (time + humans) is nearly done
-(heartbeat, portrait UI, coherence eval ~93%); M4 (the open-admission guest
-gate) is next. See [`SPEC.md` §5](SPEC.md) for the milestone checklists.
+M1 (physics), M2 (minds), and M3 (time + humans; closed 2026-07-09 after an
+unattended overnight run, coherence eval 93.2) are complete. M4 (the
+open-admission guest gate) is built and verified end-to-end — gate, probes,
+containment, reference guest — with one item outstanding: a guest on a
+different physical host surviving 48h (needs a second machine + elapsed
+time). See [`SPEC.md` §5](SPEC.md) for the milestone checklists.
 
 ## License / attribution
 

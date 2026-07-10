@@ -102,9 +102,11 @@ One codebase, many instances (persona injected via env/YAML). Each instance:
 ### 2.5 Gatekeeper (`gate/`, mounted in the engine)
 - `POST /gate/register {card_url, figure, died_year}` → portrayal-policy check →
   fetch + schema-validate the Agent Card → behavioral probes over the
-  candidate's real A2A endpoint (§6) → on pass, create a guest agent row +
-  scoped token, place the character at the courtyard door (arrival event),
-  return the token + probe scorecard. Ejected guests may re-apply.
+  candidate's real A2A endpoint (§6) → on pass, the ENGINE admits the guest
+  (`engine.handlers.admit_guest`: agent row + scoped token, placed at the
+  courtyard door with an arrival event — gate/ never writes world state, hard
+  rule 1), and the token + probe scorecard are returned. Ejected guests may
+  re-apply.
 - `gate/probes.py` keeps the pure card/portrayal checks separate (unit-tested)
   from the async behavioral probes. Guest **containment** (the action cap,
   hourly rate limit, say filter, and 3-strike auto-eject) lives in the engine
@@ -264,14 +266,14 @@ the-interval/
   invariant checker. M1 checks green.
 - **P2 Minds — DONE:** NPC runtime, A2A cards/messaging, memory + compaction,
   multi-provider routing, Langfuse. M2 green (rumor demo passed).
-- **P3 Time+Humans — in progress:** heartbeat (adaptive), event seeds, gateway +
-  portrait UI, operator controls, coherence eval (~93%). Remaining: formally
-  run the M3 checklist incl. the 24h unattended run.
+- **P3 Time+Humans — DONE:** heartbeat (adaptive), event seeds, gateway +
+  portrait UI, operator controls, coherence eval (93.2). M3 checklist run and
+  closed 2026-07-09 (unattended overnight run, invariants clean).
 - **P4 Open Door — mostly done:** gatekeeper + probes + containment (TDD,
-  25 gate/containment tests), GUEST_PROTOCOL.md, reference external guest
-  (verified admit→act→3-strike-eject live), README. Remaining: the 48h
-  guest-on-a-different-physical-host run (FR-6.5) — needs a second machine +
-  elapsed time (operator-launched), and a 60s demo GIF.
+  21 gate/containment tests), GUEST_PROTOCOL.md, reference external guest
+  (verified admit→act→3-strike-eject live), README + 60s demo GIF. Remaining:
+  the 48h guest-on-a-different-physical-host run (FR-6.5) — needs a second
+  machine + elapsed time (operator-launched).
 
 ## 10. Key decisions (ADR-style, one-liners)
 

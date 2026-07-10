@@ -240,7 +240,7 @@ Each milestone gates the next. "Done" = all its checks pass.
 - [x] README (overview + architecture diagram + guest walkthrough).
 - [ ] One guest on a DIFFERENT physical host survives 48h (FR-6.5) — needs a
       second machine + elapsed time (operator-launched; the flow is proven).
-- [ ] 60-second demo GIF.
+- [x] 60-second demo GIF (in README: café live + visitor chat + cross-talk).
 - [x] Coherence eval ≥ 80% (93.2).
 
 ---
