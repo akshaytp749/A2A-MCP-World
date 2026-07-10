@@ -11,6 +11,8 @@ conversation going on their own — and anyone can walk in and talk to them.
 
 Runs entirely on **free tiers — $0/month**.
 
+![The Interval — the café live, with a visitor talking to Mark Twain](web/assets/demo/the-interval.gif)
+
 > Fictional AI portrayals of historical figures — not affiliated with their estates.
 
 ---
