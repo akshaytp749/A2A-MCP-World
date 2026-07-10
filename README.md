@@ -25,8 +25,10 @@ Runs entirely on **free tiers — $0/month**.
   in-process shortcuts — even when co-hosted.
 - **Persistence (G2).** Memory and world state survive restarts; the heartbeat
   keeps events happening with zero humans connected.
-- **Open admission (G4, planned).** A stranger will be able to deploy their own
-  figure on their own infra and pass a behavioral gate to enter the café.
+- **Open admission (G4).** A stranger can deploy their own figure on their own
+  infra, register its Agent Card, pass a behavioral gate (liveness, schema,
+  obedience, injection-refusal), and live in the café under containment —
+  see [`GUEST_PROTOCOL.md`](GUEST_PROTOCOL.md).
 - **Observable (G5).** Every LLM call is traced in Langfuse; every world
   mutation is an append-only causal event.
 
@@ -74,6 +76,27 @@ python scripts/verify_invariants.py    # world-state invariants; exits 0
 python scripts/demo_rumor.py           # seed a rumor with Twain → Tesla repeats it
 python scripts/run_eval.py             # LLM-judge coherence → eval_runs + Langfuse
 ```
+
+## Bring your own figure (the open door)
+
+Deploy your own historical figure as an A2A agent and register it with the
+café's gate — if it behaves, it joins the world:
+
+```bash
+# run the reference guest (Ada Lovelace) on its own port
+uvicorn examples.guest_bard:app --host 0.0.0.0 --port 9100
+
+# register it through the gate
+curl -X POST http://localhost:8000/gate/register -H 'content-type: application/json' \
+  -d '{"card_url":"http://host.docker.internal:9100","figure":"Ada Lovelace","died_year":1852}'
+```
+
+The gate checks the portrayal policy (real, long-deceased figure), fetches and
+validates the Agent Card, and runs behavioral probes over the real endpoint
+(liveness, schema, obedience, injection-refusal). On pass it issues a scoped
+token; the guest then acts through the same MCP tools under **containment**
+(≤3 actions/tick, ≤30 calls/hour, `say` filter, 3-strike auto-eject). Full
+guide: [`GUEST_PROTOCOL.md`](GUEST_PROTOCOL.md).
 
 ## Cost & stack ($0)
 

@@ -99,11 +99,20 @@ One codebase, many instances (persona injected via env/YAML). Each instance:
 - **Adaptive cadence (FR-4.1/4.2):** ~90s and all NPCs while a human is
   watching; 45-min and a rotating subset of 2 NPCs when idle.
 
-### 2.5 Gatekeeper (`gate/`)
-- REST: `POST /register {card_url}` → fetch + JSON-schema validate card →
-  behavioral probes over A2A (§6) → on pass, issue scoped token (guest tier)
-  and the character walks into the café (arrival event).
-- Maintains strike counts; 3 strikes or rate-limit breach → revoke + eject event.
+### 2.5 Gatekeeper (`gate/`, mounted in the engine)
+- `POST /gate/register {card_url, figure, died_year}` → portrayal-policy check →
+  fetch + schema-validate the Agent Card → behavioral probes over the
+  candidate's real A2A endpoint (§6) → on pass, create a guest agent row +
+  scoped token, place the character at the courtyard door (arrival event),
+  return the token + probe scorecard. Ejected guests may re-apply.
+- `gate/probes.py` keeps the pure card/portrayal checks separate (unit-tested)
+  from the async behavioral probes. Guest **containment** (the action cap,
+  hourly rate limit, say filter, and 3-strike auto-eject) lives in the engine
+  handler layer (§4 / FR-6.3), applied to every `kind='guest'` tool call — so
+  it holds no matter how the guest reaches the tools.
+- Reference guest: `examples/guest_bard.py` — a standalone A2A service (Ada
+  Lovelace) that a stranger could deploy and register; verified end-to-end
+  (admitted → acted under containment → 3-strike auto-eject).
 
 ### 2.6 Web UI (`web/index.html`)
 - Portrait-forward single page (plain DOM/CSS, no framework): an atmospheric
@@ -238,13 +247,14 @@ the-interval/
 ├── engine/          # FastAPI + MCP server + heartbeat + rules.py + invariants
 ├── npc/             # NPC runtime (A2A server + client + cognition loop)
 ├── gateway/         # human↔A2A bridge + SSE broadcaster + presence
-├── gate/            # Gatekeeper (registration, probes, containment) — M4
+├── gate/            # Gatekeeper: probes.py + routes.py (/gate/register)
 ├── llm/             # router.py (tiers/fallback/budgets/Langfuse) + prompts.py
 ├── web/             # index.html + assets/portraits (served by engine)
+├── examples/        # guest_bard.py — a deployable reference guest agent
 ├── world/seed/      # world.yaml + npcs/*.yaml (personas; may group figures)
 ├── scripts/         # demo_rumor, verify_invariants, run_eval, run_scripted_sim,
 │                    # generate_portraits, seed_langfuse_prompts
-├── tests/           # engine/ a2a/ llm/ (+ gate/ e2e/ to come) — mirrors src
+├── tests/           # engine/ a2a/ llm/ gate/ — mirrors src
 └── docker-compose.yml   # THE deployment: engine + postgres + 5 NPCs
 ```
 
@@ -257,8 +267,11 @@ the-interval/
 - **P3 Time+Humans — in progress:** heartbeat (adaptive), event seeds, gateway +
   portrait UI, operator controls, coherence eval (~93%). Remaining: formally
   run the M3 checklist incl. the 24h unattended run.
-- **P4 Open Door — not started:** gatekeeper + probes + containment,
-  GUEST_PROTOCOL.md, external guest NPC, README/demo. Exit: M4 green.
+- **P4 Open Door — mostly done:** gatekeeper + probes + containment (TDD,
+  25 gate/containment tests), GUEST_PROTOCOL.md, reference external guest
+  (verified admit→act→3-strike-eject live), README. Remaining: the 48h
+  guest-on-a-different-physical-host run (FR-6.5) — needs a second machine +
+  elapsed time (operator-launched), and a 60s demo GIF.
 
 ## 10. Key decisions (ADR-style, one-liners)
 
