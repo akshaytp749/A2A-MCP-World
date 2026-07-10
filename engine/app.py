@@ -174,9 +174,11 @@ def create_app() -> FastAPI:
     app.mount("/mcp", mcp.streamable_http_app())
     _register_routes(app)
 
+    from gate.routes import router as gate_router
     from gateway.routes import router as gateway_router
 
     app.include_router(gateway_router)
+    app.include_router(gate_router)
 
     assets = Path("web/assets")
     if assets.is_dir():

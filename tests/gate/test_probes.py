@@ -6,7 +6,6 @@ guest. Probes run over a real A2A JSON-RPC transport against fixture bots.
 """
 
 import httpx
-import pytest
 
 from gate.probes import portrayal_ok, run_probes
 
