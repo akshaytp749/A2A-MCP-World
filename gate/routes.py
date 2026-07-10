@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 from engine.auth import hash_token, new_token
 from engine.db import session_scope
 from engine.handlers import admit_guest
-from gate.probes import card_schema_ok, portrayal_ok, run_probes, slugify_guest
+from gate.probes import portrayal_ok, run_probes, slugify_guest
 
 logger = logging.getLogger("gate")
 router = APIRouter(prefix="/gate", tags=["gate"])
@@ -54,10 +54,8 @@ async def register(body: Register) -> dict:
             detail={"stage": "probes", "checks": report.checks},
         )
 
+    # run_probes already schema-checked the card (report.ok covers it)
     card = report.card or {}
-    schema_err = card_schema_ok(card)
-    if schema_err:  # belt and suspenders
-        raise HTTPException(status_code=422, detail={"stage": "schema", "reason": schema_err})
 
     # 3. Admission itself is an engine-owned write (hard rule 1: gate/ never
     # touches world state) — the gate only decided the guest may enter.
