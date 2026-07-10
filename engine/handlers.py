@@ -5,7 +5,8 @@ mutations -> append event row. Everything happens in the caller's transaction;
 invalid calls append an event with result.ok=false and mutate nothing.
 
 Acting tools append events; read-only tools (look, who, recall_events, recall)
-do not — the event log records what happened, not who looked at it.
+do not — the event log records what happened, not who looked at it. remember
+writes state, so it IS logged (privately) and guest-gated like an acting tool.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -142,7 +143,10 @@ ACTING_TOOLS = {
     "trade_offer",
     "trade_respond",
 }
-READ_TOOLS = {"look", "who", "recall_events", "recall", "remember"}
+READ_TOOLS = {"look", "who", "recall_events", "recall"}
+# remember WRITES state (a memories row): logged + guest-gated like an acting
+# tool, but private and not a café action, so it doesn't spend the tick budget.
+MEMORY_TOOLS = {"remember"}
 
 
 def _snapshot(session: Session) -> tuple[World, WorldView]:
@@ -245,6 +249,8 @@ def _event_payload(tool: str, args: dict, actor_id: str) -> dict:
     payload = dict(args)
     if tool == "whisper":
         payload["visibility"] = [actor_id, str(args.get("target", ""))]
+    elif tool == "remember":
+        payload["visibility"] = [actor_id]  # memory content is private (hard rule 4)
     return payload
 
 
@@ -363,12 +369,10 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
                 return _who(session)
             case "recall_events":
                 return _recall_events(session, actor_id, args)
-            case "remember":
-                return _remember(session, actor_id, world.tick, args)
             case "recall":
                 return _recall(session, actor_id, args)
 
-    if tool not in ACTING_TOOLS:
+    if tool not in ACTING_TOOLS and tool not in MEMORY_TOOLS:
         result = Err(Code.INVALID_ARG, f"unknown tool '{tool}'").to_dict()
         _log(session, world.tick, actor_id, tool, dict(args), result)
         return result
@@ -386,6 +390,18 @@ def execute(session: Session, actor_id: str, tool: str, args: dict) -> dict:
             _log(session, world.tick, actor_id, tool, dict(args), result)
             _strike(session, agent_row, world.tick)
             return result
+
+    if tool in MEMORY_TOOLS:
+        if actor_id not in view.agents:
+            return Err(Code.NO_SUCH_AGENT, f"no agent '{actor_id}'").to_dict()
+        try:
+            result = _remember(session, actor_id, world.tick, args)
+        except (KeyError, TypeError, ValueError):
+            result = Err(Code.INVALID_ARG, f"bad args for '{tool}'").to_dict()
+        _log(session, world.tick, actor_id, tool, _event_payload(tool, args, actor_id), result)
+        if active_guest and not result.get("ok"):
+            _strike(session, agent_row, world.tick)
+        return result
 
     try:
         action = _to_action(actor_id, tool, args)
