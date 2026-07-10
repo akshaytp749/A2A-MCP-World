@@ -1,5 +1,15 @@
 # The Interval
 
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![A2A](https://img.shields.io/badge/A2A_protocol-agent%E2%86%94agent-6f42c1)
+![MCP](https://img.shields.io/badge/MCP-agent%E2%86%92world-0b7285)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Langfuse](https://img.shields.io/badge/Langfuse-traces_·_prompts_·_evals-e8590c)
+![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-118_passing-2f9e44)
+![Cost](https://img.shields.io/badge/cost-%240%2Fmonth-2b8a3e)
+
 A persistent, living multi-agent world — **The Interval**, a café that exists
 between times, where every resident is an independently deployed AI agent
 portraying a long-deceased historical figure (Socrates, Mark Twain, Nikola
@@ -48,6 +58,19 @@ Browser ──▶ Gateway ──A2A──▶ NPC services ──MCP──▶ Wor
   the engine's tools. **A2A (horizontal, agent→agent):** NPCs talk to each other.
 - Full detail: [`ARCHITECTURE.md`](ARCHITECTURE.md). What & why: [`SPEC.md`](SPEC.md).
   Contributor rules: [`CLAUDE.md`](CLAUDE.md).
+
+## The stack
+
+| Layer | Tech | Role |
+|---|---|---|
+| Agent ↔ agent | [A2A protocol](https://github.com/a2aproject/A2A) (`a2a-sdk`) | Agent Cards + JSON-RPC `message/send`; every NPC↔NPC and human↔NPC message is a real network call |
+| Agent → world | [MCP](https://modelcontextprotocol.io) (`mcp` Python SDK) | Streamable-HTTP tool surface with bearer-token auth; the only way anyone changes world state |
+| World engine | FastAPI · SQLAlchemy + Alembic · PostgreSQL | Pure-rules validation + transactional handlers; append-only event log; invariant checker |
+| Minds | Groq `gpt-oss-120b` · Gemini `flash-lite` · OpenRouter | Tier-routed via `llm/router.py` with provider fallback and per-tick budgets — all free tier |
+| Observability | [Langfuse](https://langfuse.com) | Every LLM call traced; prompts managed in the UI (in-code fallback); coherence eval scores |
+| Time | APScheduler heartbeat | Adaptive ticks: ~90 s watched, 45 min idle — the world moves with zero humans connected |
+| Admission | `gate/` behavioral probes | Liveness, card schema, obedience, injection-refusal over the candidate's real endpoint |
+| Ops | Docker Compose · Cloudflare Tunnel · pytest · ruff | One-command local deploy; free public URL; 118 tests |
 
 ## Quickstart
 
