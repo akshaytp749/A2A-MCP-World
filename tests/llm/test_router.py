@@ -178,7 +178,7 @@ def test_provider_rung_reached_when_gemini_chain_dead(monkeypatch):
     router = LLMRouter(generate_fn=fake, langfuse_enabled=False)
     out = router.generate(tier="mid", agent_id="socrates", tick=1, prompt="hi")
     assert out == "ok"
-    assert fake.attempts[-1] == "groq:llama-3.3-70b-versatile"
+    assert fake.attempts[-1] == "groq:qwen/qwen3.8-27b"
     assert router.usage()["used_today"] == 1
 
 

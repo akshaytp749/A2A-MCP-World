@@ -1,5 +1,7 @@
 """World Engine service: /health, admin API, and the MCP mount (ARCHITECTURE §2.1)."""
 
+import hmac
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,11 +17,26 @@ from engine.mcp_server import build_mcp
 from engine.models import Agent, Event, World
 from engine.seed import load_seed, seed_world
 
+DEFAULT_ADMIN_TOKEN = "dev-admin-token"
+
+logger = logging.getLogger(__name__)
+
 
 def require_admin(authorization: str | None = Header(default=None)) -> None:
     expected = f"Bearer {settings.admin_token}"
-    if authorization != expected:
+    # constant-time: a plain != leaks how many leading characters matched
+    if not hmac.compare_digest((authorization or "").encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="admin token required")
+
+
+def warn_if_default_admin_token() -> None:
+    """The admin API can mint agent tokens, eject agents and pause the world."""
+    if settings.admin_token == DEFAULT_ADMIN_TOKEN:
+        logger.warning(
+            "ADMIN_TOKEN is the public default '%s'. Fine on localhost; set a real "
+            "ADMIN_TOKEN before exposing the engine (e.g. through a tunnel).",
+            DEFAULT_ADMIN_TOKEN,
+        )
 
 
 class CreateAgent(BaseModel):
@@ -154,6 +171,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        warn_if_default_admin_token()
         init_db()
         seed_path = Path(settings.seed_path)
         if seed_path.exists():

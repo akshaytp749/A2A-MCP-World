@@ -65,7 +65,7 @@ Browser ──▶ Gateway ──A2A──▶ NPC services ──MCP──▶ Wor
 |---|---|---|
 | Agent ↔ agent | [A2A protocol](https://github.com/a2aproject/A2A) (`a2a-sdk`) | Agent Cards + JSON-RPC `message/send`; every NPC↔NPC and human↔NPC message is a real network call |
 | Agent → world | [MCP](https://modelcontextprotocol.io) (`mcp` Python SDK) | Streamable-HTTP tool surface with bearer-token auth; the only way anyone changes world state |
-| World engine | FastAPI · SQLAlchemy + Alembic · PostgreSQL | Pure-rules validation + transactional handlers; append-only event log; invariant checker |
+| World engine | FastAPI · SQLAlchemy · PostgreSQL | Pure-rules validation + transactional handlers; append-only event log; invariant checker |
 | Minds | Groq `gpt-oss-120b` · Gemini `flash-lite` · OpenRouter | Tier-routed via `llm/router.py` with provider fallback and per-tick budgets — all free tier |
 | Observability | [Langfuse](https://langfuse.com) | Every LLM call traced; prompts managed in the UI (in-code fallback); coherence eval scores |
 | Time | APScheduler heartbeat | Adaptive ticks: ~90 s watched, 45 min idle — the world moves with zero humans connected |

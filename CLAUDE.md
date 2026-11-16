@@ -67,7 +67,7 @@ guests. Diagram + tool table: ARCHITECTURE.md §1 and §4.
   (a2a-python, mcp Python SDK) rather than guessing APIs from memory.
 
 ## Conventions
-- Python 3.12, FastAPI, SQLAlchemy+Alembic, pydantic models everywhere at
+- Python 3.12, FastAPI, SQLAlchemy (schema via create_all; no Alembic migrations yet), pydantic models everywhere at
   boundaries; type hints required; ruff clean.
 - Structured errors: `{ok, code, msg}` — codes in engine/errors.py, reused
   by tests.
