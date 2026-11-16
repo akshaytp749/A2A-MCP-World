@@ -18,6 +18,11 @@ from datetime import date
 #   gemini-flash-latest        4.1s  very good   ~1,500/day (10 RPM)
 #   gemini-flash-lite-latest   1.1s  good        ~1,500/day   <- cheap primary
 # Gemini legacy: 2.5 models capped at 20/day, 2.0 retired — never route there.
+# 2026-08-16: Groq RETIRED llama-3.3-70b-versatile and llama-3.1-8b-instant
+# (404 model_not_found). Fallbacks below now use Groq's listed replacements;
+# both are capped at 8k tokens/min and 1,000 req/day on the free tier
+# (measured 2026-11-16). Check console.groq.com/docs/deprecations before pinning
+# a new id — a dead rung fails silently until the rungs above it are exhausted.
 # 'provider:' prefix selects the backend; bare ids go to Gemini. Cheap stays
 # on Gemini to spread load across providers. Revisit after M3 evals (FR-2.5).
 TIER_MODELS = {
@@ -27,7 +32,7 @@ TIER_MODELS = {
 # When a tier's primary model is quota-exhausted, degrade down this chain
 # rather than going silent (same idea as FR-4.4: quiet beats crashed).
 TIER_FALLBACKS = {
-    "cheap": ["groq:llama-3.1-8b-instant"],
+    "cheap": ["groq:openai/gpt-oss-20b"],
     "mid": ["gemini-flash-latest"],
 }
 # Cross-provider last-resort rungs, tried after the tier chain and only when
@@ -36,13 +41,12 @@ TIER_FALLBACKS = {
 # (1,000/day after a one-time $10 credit purchase — optional, off by default).
 # Override the model per provider via GROQ_MODEL / OPENROUTER_MODEL.
 PROVIDER_FALLBACKS = [
-    ("GROQ_API_KEY", "groq", "GROQ_MODEL", "llama-3.3-70b-versatile"),
-    (
-        "OPENROUTER_API_KEY",
-        "openrouter",
-        "OPENROUTER_MODEL",
-        "meta-llama/llama-3.3-70b-instruct:free",
-    ),
+    # Deliberately NOT gpt-oss-120b: that is the mid tier's primary, so repeating it
+    # here would be a dead rung exactly when it is needed.
+    ("GROQ_API_KEY", "groq", "GROQ_MODEL", "qwen/qwen3.8-27b"),
+    # 'openrouter/free' is OpenRouter's router over whichever :free models
+    # currently exist — pinned :free ids (llama-3.3-70b-instruct:free) vanish.
+    ("OPENROUTER_API_KEY", "openrouter", "OPENROUTER_MODEL", "openrouter/free"),
 ]
 
 
